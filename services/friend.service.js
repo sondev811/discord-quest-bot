@@ -39,7 +39,16 @@ class FriendService {
       const item = await friendModel.updateMany(conditions, { $set: { intimacyPoints } });
       return item;
     } catch (error) {
-        console.log(error.message);
+      console.log(error);
+    }
+  }
+
+  static async getAllFriends() {
+    try {
+      const friends = await friendModel.find();
+      return friends;
+    } catch (error) {
+      console.log(error);
     }
   }
 }

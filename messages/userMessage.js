@@ -64,12 +64,27 @@ const roleBonusRender = (roles) => {
 }
 
 const ranking = (rankings) => {
-  let index = 0;
+  let index = 1;
   let render = '';
   for(let rank of rankings) {
-    if (index >= 5) break;
-    render += `${rankingTrophy[index]} <@${rank.discordUserId}>: ${rank.quantity}\n`
-    index++;
+    if (index > 20) break;
+    if (rank.quantity > 0) {
+      render +=  '``Top '+ index +'``' + `<@${rank.discordUserId}>: ${rank.quantity} ${rank.type === RewardEnum.SILVER_TICKET ? emoji.silverTicket : emoji.goldenTicket }\n`
+      index++;
+    }
+  }
+  return render;
+}
+
+const rankingCouple = (rankings) => {
+  let index = 1;
+  let render = '';
+  for(let rank of rankings) {
+    if (index > 20) break;
+    if (rank.intimacyPoints > 0) {
+      render +=  '``Top '+ index +'``' + `<@${rank.discordIdFirst}> - <@${rank.discordIdLast}> : ${rank.intimacyPoints}${emoji.imPoint}\n`
+      index++;
+    }
   }
   return render;
 }
@@ -181,8 +196,8 @@ const createUserMessage = (type, body = {}) => {
       break;
     case userActionType.bxh:
       embed = new EmbedBuilder()
-      .setTitle(`${emoji.royal} Bảng xếp hạng`)
-      .setDescription(`${emoji.ruby}Xếp hạng vé xanh: \n ${ranking(body.topSilver)}\n${emoji.ruby2} Xếp hạng vé vàng:\n ${ranking(body.topGolden)} \n ${emoji.giftBox} Xếp hạng quà đã tặng:\n ${ranking(body.topGift)}`)
+      .setTitle(`${emoji.royal} Bảng xếp hạng ${body.rankingType}`)
+      .setDescription(body.isCouple ? rankingCouple(body.rankList) : ranking(body.rankList))
       .setColor(0xe59b9b)
       .setFooter({ 
         text: `Bot Làng • discord.gg/langleuleuliuliu`,

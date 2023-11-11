@@ -1,4 +1,4 @@
-const { ButtonBuilder, ActionRowBuilder } = require("@discordjs/builders");
+const { ButtonBuilder, ActionRowBuilder, SelectMenuOptionBuilder, StringSelectMenuOptionBuilder, StringSelectMenuBuilder } = require("@discordjs/builders");
 const connectDB = require("../DB/connection");
 const { userActionType, errors } = require("../constants/general");
 const messages = require("../constants/messages");
@@ -10,6 +10,7 @@ const { convertTimestamp, checkingLastAttended, checkStreak, findRoleBuff, rando
 const { ButtonStyle, ComponentType } = require("discord.js");
 const { RoleService } = require("../services/role.service");
 const { RewardEnum } = require("../models/quest.model");
+const { FriendService } = require("../services/friend.service");
 connectDB();
 process.env.TZ = 'Asia/Bangkok';
 
@@ -363,32 +364,118 @@ const top = {
         await interaction.followUp({ embeds: [createNormalMessage(messages.unreadyRegisterBot)] });
         return;
       }
+      const friendsList = await FriendService.getAllFriends();
+      if (!friendsList.length) return;
       const silver = [];
       const golden = [];
-      const gift = [];
       const users = await UserService.getAllUser();
       users.forEach(user => {
         silver.push({
           discordUserId: user.discordUserId,
-          quantity: user.tickets.silver
+          quantity: user.tickets.silver,
+          type: RewardEnum.SILVER_TICKET
         });
         golden.push({
           discordUserId: user.discordUserId,
-          quantity: user.tickets.gold
-        });
-        gift.push({
-          discordUserId: user.discordUserId,
-          quantity: user.giftsGiven.length
+          quantity: user.tickets.gold,
+          type: RewardEnum.GOLD_TICKET
         });
       });
-
+      
       const topSilver = silver.sort((a, b) => b.quantity - a.quantity);
       const topGolden = golden.sort((a, b) => b.quantity - a.quantity);
-      const topGift = gift.sort((a, b) => b.quantity - a.quantity);
-
-      await interaction.followUp({
-        embeds: [createUserMessage(userActionType.bxh, { topSilver, topGolden, topGift })]
+      const topFriends = friendsList.sort((a, b) => b.intimacyPoints - a.intimacyPoints);
+      const select = new StringSelectMenuBuilder()
+        .setCustomId('ranking')
+        .setPlaceholder('Chọn vật bảng xếp hạng')
+        .addOptions(
+          new StringSelectMenuOptionBuilder()
+            .setLabel('Bảng xếp hạng vé xanh')
+            .setDescription('Top 20 người nhiều vé xanh nhất')
+            .setValue('silverTicket')
+            .setDefault(true)
+        )
+        .addOptions(
+          new StringSelectMenuOptionBuilder()
+            .setLabel('Bảng xếp hạng vé vàng')
+            .setDescription('Top 20 người nhiều vé vàng nhất')
+            .setValue('goldTicket')
+        )
+        .addOptions(
+          new StringSelectMenuOptionBuilder()
+            .setLabel('Bảng xếp hạng cặp đôi')
+            .setDescription('Top 20 cặp đôi nhiều điểm thân thiết')
+            .setValue('point')
+        )
+      
+      const row = new ActionRowBuilder().addComponents(select);
+      
+      const reply = await interaction.followUp({
+        embeds: [createUserMessage(userActionType.bxh, { rankList: topSilver, isCouple: false, rankingType: 'vé xanh' })],
+        components: [row]
       });
+      const selectCollection = reply.createMessageComponentCollector({
+        componentType: ComponentType.StringSelect,
+        filter: (i) => i.user.id === interaction.user.id && i.customId === 'ranking',
+        time: 300000
+      });
+
+      selectCollection.on('collect', async interaction => {
+        try {
+          await interaction.deferUpdate();
+          const [value] = interaction.values;
+          let selectedOption = 'silverTicket';
+          let rankList = null;
+          let isCouple = false;
+          let rankingType = 'vé xanh';
+
+          if (value === 'silverTicket') {
+            rankList = topSilver;
+          } else if (value === 'goldTicket') {
+            selectedOption = 'goldTicket';
+            rankList = topGolden;
+            rankingType = 'vé vàng';
+          } else {
+            selectedOption = 'point';
+            rankList = friendsList;
+            rankingType = 'điểm thân thiết'
+            isCouple = true;
+          }
+
+          const selectNew = new StringSelectMenuBuilder()
+            .setCustomId('ranking')
+            .setPlaceholder('Chọn vật bảng xếp hạng')
+            .addOptions(
+              new StringSelectMenuOptionBuilder()
+                .setLabel('Bảng xếp hạng vé xanh')
+                .setDescription('Top 20 người nhiều vé xanh nhất')
+                .setValue('silverTicket')
+                .setDefault(selectedOption === 'silverTicket')
+            )
+            .addOptions(
+              new StringSelectMenuOptionBuilder()
+                .setLabel('Bảng xếp hạng vé vàng')
+                .setDescription('Top 20 người nhiều vé vàng nhất')
+                .setValue('goldTicket')
+                .setDefault(selectedOption === 'goldTicket')
+            )
+            .addOptions(
+              new StringSelectMenuOptionBuilder()
+                .setLabel('Bảng xếp hạng cặp đôi')
+                .setDescription('Top 20 cặp đôi nhiều điểm thân thiết')
+                .setValue('point')
+                .setDefault(selectedOption === 'point')
+            )
+
+          const rowNew = new ActionRowBuilder().addComponents(selectNew);
+          await reply.edit({
+            embeds: [createUserMessage(userActionType.bxh, { rankList, isCouple, rankingType })],
+            components: [rowNew]
+          });
+        } catch (error) {
+          console.log(error);
+        }
+      })
     } catch (error) {
       console.log(error, '[bxh]');
     }
