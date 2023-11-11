@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require("@discordjs/builders");
-const { userActionType, emoji, imageCommand, levelImage } = require("../constants/general");
+const { userActionType, emoji, imageCommand, levelImage, rankingTrophy } = require("../constants/general");
 const { RewardEnum, ActionEnum } = require("../models/quest.model");
 const { roundAndFormat } = require("../utils");
 
@@ -60,6 +60,17 @@ const roleBonusRender = (roles) => {
   roles.forEach(role => {
     render += `${emoji.blank}${emoji.fiveDot}<@&${role.roleId}>: +${role.valueBuff} ${role.typeBuff === RewardEnum.SILVER_TICKET ? `% ${emoji.silverTicket}` : emoji.goldenTicket} \n`
   })
+  return render;
+}
+
+const ranking = (rankings) => {
+  let index = 0;
+  let render = '';
+  for(let rank of rankings) {
+    if (index >= 5) break;
+    render += `${rankingTrophy[index]} <@${rank.discordUserId}>: ${rank.quantity}\n`
+    index++;
+  }
   return render;
 }
 
@@ -168,6 +179,16 @@ const createUserMessage = (type, body = {}) => {
       })
       .setTimestamp();
       break;
+    case userActionType.bxh:
+      embed = new EmbedBuilder()
+      .setTitle(`${emoji.royal} Bảng xếp hạng`)
+      .setDescription(`${emoji.ruby}Xếp hạng vé xanh: \n ${ranking(body.topSilver)}\n${emoji.ruby2} Xếp hạng vé vàng:\n ${ranking(body.topGolden)} \n ${emoji.giftBox} Xếp hạng quà đã tặng:\n ${ranking(body.topGift)}`)
+      .setColor(0xe59b9b)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setTimestamp();
       break;
     default:
       break;

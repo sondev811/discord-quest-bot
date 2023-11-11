@@ -352,12 +352,16 @@ const rewardQuestDailyExecute = async (reply, backQuestBoard, discordId) => {
     const user = await UserService.getUserById(discordId);
     const quests = user.quests.dailyQuestsReceived.quests;
     let silverEarning = 0;
+    let goldenEarning = 0;
     let countSuccessQuest = 0;
     quests.forEach(quest => {
-      if (quest.progress === quest.completionCriteria && !quest.isReceivedReward) {
+      if (quest.progress >= quest.completionCriteria && !quest.isReceivedReward) {
         quest.rewards.forEach(reward => {
           if (reward.rewardType === RewardEnum.SILVER_TICKET) {
             silverEarning += reward.quantity;
+          }
+          if (reward.rewardType === RewardEnum.GOLD_TICKET) {
+            goldenEarning += reward.quantity;
           }
         });
         quest.isReceivedReward = true;
@@ -377,6 +381,7 @@ const rewardQuestDailyExecute = async (reply, backQuestBoard, discordId) => {
     }
     user.quests.dailyQuestsReceived.quests = quests;
     user.tickets.silver += silverEarning;
+    user.tickets.gold += goldenEarning;
     user.totalTicketClaimDaily += silverEarning;
     user.totalQuestCompleted += countSuccessQuest;
   
@@ -406,7 +411,7 @@ const rewardQuestWeekExecute = async (reply, backQuestBoard, discordId) => {
     let countSuccessQuest = 0;
     const tempBag = [];
     quests.forEach(quest => {
-      if (quest.progress === quest.completionCriteria && !quest.isReceivedReward) {
+      if (quest.progress >= quest.completionCriteria && !quest.isReceivedReward) {
         quest.rewards.forEach(reward => {
           if (reward.rewardType === RewardEnum.SILVER_TICKET) {
             silverEarning += reward.quantity;

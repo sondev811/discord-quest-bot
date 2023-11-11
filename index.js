@@ -8,6 +8,7 @@ const { run } = require('./features/index');
 const { UserService } = require('./services/user.service');
 const { ActionEnum } = require('./models/quest.model');
 dotenv.config();
+process.env.TZ = 'Asia/Bangkok';
 
 const client = new Client(
   { 
@@ -149,7 +150,8 @@ const commands = [
       setDescription('Giá ticket vàng trên shop(có thể không set trường này nếu item này không cho mua bằng vé vàng)')
     ),
   new SlashCommandBuilder().setName('admin-remove-item-shop').setDescription('Xóa item trong shop(Chỉ chủ server mới có quyền)'),
-  new SlashCommandBuilder().setName('admin-remove-role').setDescription('Xóa role buff daily(Chỉ chủ server mới có quyền)')
+  new SlashCommandBuilder().setName('admin-remove-role').setDescription('Xóa role buff daily(Chỉ chủ server mới có quyền)'),
+  new SlashCommandBuilder().setName('leubxh').setDescription('Xem bảng xếp hạng phú hộ và tặng quà')
 
 ].map(command => command.toJSON());
 
@@ -172,6 +174,7 @@ client.login(process.env.TOKEN).then(() => {
 
 client.on(Events.MessageCreate, async (message) => {
   try {
+    if (process.env.MAINTENANCE === 'maintenance') return;
     const user = await UserService.getUserById(message.author.id);
     if (!user || !user.discordUserId) return;
     const quests = user.quests.dailyQuestsReceived.quests;
@@ -239,6 +242,7 @@ client.on(Events.MessageCreate, async (message) => {
 
 client.on(Events.ThreadCreate, async (thread) => {
   try {
+    if (process.env.MAINTENANCE === 'maintenance') return;
     const user = await UserService.getUserById(thread.ownerId);
     if (!user || !user.discordUserId) return;
 
@@ -268,44 +272,48 @@ client.on(Events.ThreadCreate, async (thread) => {
   }
 })
 
-let voiceChannelTimers = {};
-
 client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   try {
+    if (process.env.MAINTENANCE === 'maintenance') return;
     const userId = newState.member.user.id;
     const user = await UserService.getUserById(userId);
     if (!user || !user.discordUserId) return;
   
     if (oldState.channelId === null && newState.channelId) {
-      voiceChannelTimers[userId] = {
-        startTime: Date.now(),
-      };
+      user.joinVoiceDate = new Date();
+      await UserService.updateUser(user);
+
     } else if (oldState.channelId && newState.channelId === null) {
-      if (!voiceChannelTimers[userId] || !voiceChannelTimers[userId].startTime) return;
-      const { startTime } = voiceChannelTimers[userId];
-      const endTime = Date.now();
-      const durationInMilliseconds = endTime - startTime;
-      const durationInHours = durationInMilliseconds / (1000 * 60 * 60);
+      const dailyQuests = user.quests.dailyQuestsReceived.quests;
+      const findDailyVoiceQuest = dailyQuests.findIndex(item => item.action === ActionEnum.VOICE);
       
-      const quests = user.quests.dailyQuestsReceived.quests;
-      for(let quest of quests) {
-        if(quest.action !== ActionEnum.VOICE) {
-          continue;
-        }
+      if (findDailyVoiceQuest !== -1) {
+        const quest = user.quests.dailyQuestsReceived.quests[findDailyVoiceQuest];
+        if (!user.joinVoiceDate) return;
         if (quest.progress < quest.completionCriteria) {
-          quest.progress = quest.progress + durationInHours;
+          const startTime = user.joinVoiceDate;
+          const endTime = new Date();
+          const durationInMilliseconds = endTime - startTime;
+          const durationInHours = durationInMilliseconds / (1000 * 60 * 60);
+          user.quests.dailyQuestsReceived.quests[findDailyVoiceQuest].progress += durationInHours;
         }
-      }
-  
-      const questsWeek = user.quests.weekQuestsReceived.quests;
-      for(let quest of questsWeek) {
-        if(quest.action !== ActionEnum.VOICE) {
-          continue;
-        }
+      };
+
+      const weekQuests = user.quests.weekQuestsReceived.quests;
+      const findWeekVoiceQuest = weekQuests.findIndex(item => item.action === ActionEnum.VOICE);
+      if (findWeekVoiceQuest !== -1) {
+        const quest = user.quests.weekQuestsReceived.quests[findWeekVoiceQuest];
         if (quest.progress < quest.completionCriteria) {
-          quest.progress = quest.progress + durationInHours;
+          const startTime = user.joinVoiceDate;
+          const endTime = new Date();
+          const durationInMilliseconds = endTime - startTime;
+          const durationInHours = durationInMilliseconds / (1000 * 60 * 60);
+          user.quests.weekQuestsReceived.quests[findWeekVoiceQuest].progress += durationInHours;
         }
-      }
+      };
+
+      user.joinVoiceDate = null;
+     
       await UserService.updateUser(user);
     }
   } catch (error) {
@@ -315,6 +323,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 
 client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
   try {
+    if (process.env.MAINTENANCE === 'maintenance') return;
     const newStatus = newMember.premiumSince;
     if (newStatus) {
       const memberId = newMember.user.id;

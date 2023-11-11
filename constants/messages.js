@@ -67,8 +67,8 @@ module.exports = {
   //Friend
   addFriendError: `Lỗi phát sinh khi kết bạn.`,
   addFriendForMySelf: `Bạn không thể gửi kết bạn cho chính mình`,
-  friendFull: `Không thể kết bạn. Danh sách bạn bè của bạn đã đạt tối đa là 5 người.`,
-  friendTargetFull: (target) => `Không thể kết bạn. Danh sách bạn bè của <@${target}> đã đạt tối đa là 5 người.`,
+  friendFull: (maxFriend) => `Không thể kết bạn. Danh sách bạn bè của bạn đã đạt tối đa là ${maxFriend} người.\n » Để tăng số lượng bạn bè bạn cần mua thêm slot bạn bè. Sử dụng lệnh /leurela để biết thêm thông tin.`,
+  friendTargetFull: (target, maxFriend) => `Không thể kết bạn. Danh sách bạn bè của <@${target}> đã đạt tối đa là ${maxFriend} người. \n » Để tăng số lượng bạn bè bạn cần mua thêm slot bạn bè. Sử dụng lệnh /leurela để biết thêm thông tin.`,
   alreadyFriend: (target) => `Không thể kết bạn. Bạn và <@${target}> đã là bạn bè.`,
   addFriendUnreadyRegister: (id) => `<@${id}> vẫn chưa đăng ký sử dụng bot.`,
   sentFriendRequest: (target) => `Đã gửi lời mời kết bạn. Đợi phản hồi từ <@${target}>. Tôi sẽ báo kết quả phản hồi qua tin nhắn riêng.`,
@@ -85,8 +85,8 @@ module.exports = {
   isNotFriend: (target) => `Bạn và <@${target}> không phải là bạn.`,
   sendGiftForMySelf: `Bạn tặng quà cho chính mình`,
   isNotFriendGift: (target) => `Bạn và <@${target}> không phải là bạn. Kết bạn trước khi tặng quà`,
-
-
+  insufficientBalanceFriend: (quantity) => `Số vé của bạn không đủ để mua slot bạn bè. Cần ${quantity} ${emoji.silverTicket} để mở thêm slot bạn bè.`,
+  purchaseFriendSlotSuccess: (slot) => `Mua thêm slot bạn bè thành công. Số slot bạn bè hiện tại của bạn là ${slot}`,
   //Role buff
   addRoleError: `Lỗi phát sinh khi thêm role.`,
   addRoleSuccess: (roleId, description) => `Đã thêm role <@&${roleId}>. Role sẽ có giá trị ${description}`,

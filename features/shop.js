@@ -226,7 +226,7 @@ const progressGiftPurchase = async (quantity, user, shopReply, type, shopChosen)
   
   let total = value * priceUsing;
   if (type === currency.silver) {
-    total = total + ((total * 5) / 100);
+    total = Math.floor(total + ((total * 5) / 100));
   }
 
   if (userPriceUsing < total) {
@@ -296,7 +296,7 @@ const progressRolePurchase = async (interaction, user, shopReply, type, shopChos
 
   let total = priceUsing;
   if (type === 'buyRoleSilver') {
-    total = total + ((total * 5) / 100);
+    total = Math.floor(total + ((total * 5) / 100));
   }
   const bag = user.itemBag;
   const findIndex = bag.findIndex(item => item.id === shopChosen.id);
@@ -373,7 +373,7 @@ const progressQuestItemPurchase = async (user, shopReply, type, shopChosen) => {
 
   let total = priceUsing;
   if (type === 'buyQuestItemSilver') {
-    total = total + ((total * 5) / 100);
+    total = Math.floor(total + ((total * 5) / 100));
   }
  
   if (userPriceUsing < total) {

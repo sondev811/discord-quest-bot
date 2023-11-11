@@ -13,8 +13,8 @@ const level = (point) => {
   }
 }
 
-const renderFriendList = (friends) => {
-  let value = 'Các mối quan hệ: \n\n';
+const renderFriendList = (friends, slot) => {
+  let value = `Các mối quan hệ(${friends.length}/${slot}): \n\n`;
   if (!friends || !friends.length) return value + `${emoji.fiveDot} Chưa có`;
   friends.forEach((friend, index) => {
     if (index !== 0 && index !== friends.length) {
@@ -66,7 +66,7 @@ const createFriendMessage = (type, body = {}) => {
       .setAuthor({
         name: `💗 Các mối quan hệ của ${body.username}`,
       })
-      .setDescription(renderGifts(body.gifts) + '\n─────────────────────────\n' + renderFriendList(body.friends))
+      .setDescription(renderGifts(body.gifts) + '\n─────────────────────────\n' + renderFriendList(body.friends, body.maxFriend) + `\n`)
       .setColor(0xe59b9b)
       .setThumbnail(`https://cdn.discordapp.com/avatars/${body.discordUserId}/${body.avatar}.png`)
       .setFooter({ 
@@ -113,6 +113,17 @@ const createFriendMessage = (type, body = {}) => {
         })
         .setTimestamp();
         break;
+    case friendActionType.guide:
+      embed = new EmbedBuilder()
+      .setTitle(`${emoji.ruby} Hướng dẫn chức năng bạn bè`)
+      .setDescription(`${emoji.redDot} Thêm bạn:\n ${emoji.blank} » Chức năng thêm bạn giúp bạn có thể thêm bạn với một người đã đăng ký sử dụng bot trong server.\n ${emoji.blank} » Mặc định slot bạn bè tối đa của mỗi người sẽ là 5, để có thêm slot thì bạn phải mua thêm slot với giá 1500 ${emoji.silverTicket}\n ${emoji.blank} » Bạn không thể thêm bạn khi slot của bạn hoặc slot của đối phương đã đầy.\n ${emoji.blank} » Sử dụng lệnh /leuthemban và chọn người bạn muốn thêm bạn \n\n ${emoji.redDot} Xóa bạn:\n ${emoji.blank} » Chức năng xóa bạn giúp bạn xóa một người trong danh sách bạn bè của bạn. \n ${emoji.blank} » Khi xóa thì mọi dữ liệu về mối quan hệ sẽ bị xóa và không thể khôi phục \n ${emoji.blank} » Sử dụng lệnh /leuxoaban và chọn người bạn muốn thêm xóa`)
+      .setColor(0xe59b9b)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setTimestamp();
+      break;
     default:
       break;
   }

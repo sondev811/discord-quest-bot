@@ -18,7 +18,8 @@ const userActionType = {
   getQuest: 'getQuest',
   guide: 'guide',
   bag: 'bag',
-  giveTicketSuccess: 'giveTicketSuccess'
+  giveTicketSuccess: 'giveTicketSuccess',
+  bxh: 'bxh'
 }
 
 const shopActionType = {
@@ -38,7 +39,8 @@ const friendActionType = {
   friendRequest: 'friendRequest',
   getAllRelationship: 'getAllRelationship',
   getRelationship: 'getRelationship',
-  gift: 'gift'
+  gift: 'gift',
+  guide: 'guide'
 }
 
 const questActionType = {
@@ -97,9 +99,11 @@ const emoji = {
   warning: '<a:__:1081693459771039774>',
   imPoint: '<a:Leu_blue_hearts:1171862703384572024>',
   nitro: '<a:nitro:1137269463209742388>',
-  royal: '<a:Royalrole:1159214875936034956>',
   fiveDotX: '<a:leu_Dancing_Lines:1171864141301039167>',
-  shopItem: '<:leu_sieuthi:1171863524251795557>'
+  shopItem: '<:leu_sieuthi:1171863524251795557>',
+  fix: '<a:pepehacker:1081853612768108564>',
+  royal: '<a:Royalrole:1159214875936034956>',
+  ruby2: '<a:leu_ruby3:1166534072894505080>',
 }
 
 const levelImage = {
@@ -120,6 +124,14 @@ const imageCommand = {
   roleShop: 'https://cdn.discordapp.com/emojis/1172069398098477087.png'
 }
 
+const rankingTrophy = {
+  0: '<:top1:1172464506287431721>',
+  1: '<:top2:1172464492169408582>',
+  2: '<:top3:1172464501828886539>',
+  3: '<:top4:1172464496304984074>',
+  4: '<:top5:1172464489455702046>',
+}
+
 module.exports = { 
   confessionType, 
   confessionStatus, 
@@ -133,5 +145,6 @@ module.exports = {
   questActionType,
   emoji,
   levelImage,
-  imageCommand
+  imageCommand,
+  rankingTrophy
 };

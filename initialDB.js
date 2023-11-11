@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const { levelModel } = require('./models/level.model');
 const { questModel, TaskTypeEnum, RewardEnum, ActionEnum } = require('./models/quest.model');
+const userModel = require('./models/user.model');
+const { UserService } = require('./services/user.service');
 require('dotenv/config');
 
 const initializeDatabase = async () => {
@@ -79,8 +81,8 @@ const initializeDatabase = async () => {
           description: `Nhắn tin bất kỳ channel`,
           action: ActionEnum.MESSAGE,
           placeChannel: '',
-          minCompletionCriteria: 50,
-          maxCompletionCriteria: 300,
+          minCompletionCriteria: 400,
+          maxCompletionCriteria: 600,
           rewards: [
             {
               type: RewardEnum.SILVER_TICKET,
@@ -95,8 +97,8 @@ const initializeDatabase = async () => {
           description: `Nhắn tin tại channel`,
           action: ActionEnum.MESSAGE,
           placeChannel: '1142667605761605753',
-          minCompletionCriteria: 50,
-          maxCompletionCriteria: 200,
+          minCompletionCriteria: 200,
+          maxCompletionCriteria: 400,
           rewards: [
             {
               type: RewardEnum.SILVER_TICKET,
@@ -111,8 +113,8 @@ const initializeDatabase = async () => {
           description: `Đăng bài tại channel feeds`,
           action: ActionEnum.POST_BLOG,
           placeChannel: '1164592748758839306',
-          minCompletionCriteria: 1,
-          maxCompletionCriteria: 2,
+          minCompletionCriteria: 5,
+          maxCompletionCriteria: 12,
           rewards: [
             {
               type: RewardEnum.SILVER_TICKET,
@@ -127,8 +129,8 @@ const initializeDatabase = async () => {
           description: ` Bình luận bài post`,
           action: ActionEnum.REPLY_POST_BLOG,
           placeChannel: '1164592748758839306',
-          minCompletionCriteria: 1,
-          maxCompletionCriteria: 5,
+          minCompletionCriteria: 6,
+          maxCompletionCriteria: 13,
           rewards: [
             {
               type: RewardEnum.SILVER_TICKET,
@@ -144,7 +146,7 @@ const initializeDatabase = async () => {
           action: ActionEnum.POST_CONFESSION,
           placeChannel: '1158851593802887229',
           minCompletionCriteria: 1,
-          maxCompletionCriteria: 1,
+          maxCompletionCriteria: 3,
           rewards: [
             {
               type: RewardEnum.SILVER_TICKET,
@@ -159,8 +161,8 @@ const initializeDatabase = async () => {
           description: `Trả lời confession`,
           action: ActionEnum.REPLY_CONFESSION,
           placeChannel: '1158851593802887229',
-          minCompletionCriteria: 1,
-          maxCompletionCriteria: 5,
+          minCompletionCriteria: 3,
+          maxCompletionCriteria: 7,
           rewards: [
             {
               type: RewardEnum.SILVER_TICKET,
@@ -176,7 +178,7 @@ const initializeDatabase = async () => {
           action: ActionEnum.GIFT,
           placeChannel: '',
           minCompletionCriteria: 1,
-          maxCompletionCriteria: 1,
+          maxCompletionCriteria: 2,
           rewards: [
             {
               type: RewardEnum.SILVER_TICKET,
@@ -198,6 +200,11 @@ const initializeDatabase = async () => {
               type: RewardEnum.SILVER_TICKET,
               minQuantity: 400,
               maxQuantity: 1000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
             }
           ]
         },
@@ -207,8 +214,8 @@ const initializeDatabase = async () => {
           description: `Treo voice`,
           action: ActionEnum.VOICE,
           placeChannel: '',
-          minCompletionCriteria: 1,
-          maxCompletionCriteria: 6,
+          minCompletionCriteria: 2,
+          maxCompletionCriteria: 9,
           rewards: [
             {
               type: RewardEnum.SILVER_TICKET,
@@ -512,6 +519,14 @@ const initializeDatabase = async () => {
       console.log('Default quests inserted successfully.');
 
     }
+
+    const users = await userModel.find();
+    users.forEach(user => {
+      if (!user.maxFriend) {
+        user.maxFriend = 5;
+        UserService.updateUser(user);
+      }
+    })
   } catch (error) {
     console.error('Database initialization error:', error);
   } finally {

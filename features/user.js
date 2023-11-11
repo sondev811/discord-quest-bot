@@ -113,10 +113,22 @@ const daily = {
 
       const allRole = [...combine, ...roles];
 
+      const isStreak = checkStreak(user.dailyAttendance.lastLoginDate);
+      let streak = 1;
+      if (isStreak) {
+        streak += dailyAttendance.streak;
+      }
+      let streakBonus = streak * maxReward;
+      if (streak >= 5) {
+        streakBonus = 5 * maxReward;
+      }
+
+      let totalSilver = maxReward + streakBonus;
+
       const newBonusRole = allRole.map(role => {
         let bonus = 0;
         if (role.typeBuff === RewardEnum.SILVER_TICKET) {
-          bonus += Math.floor(((maxReward * role.valueBuff) / 100));
+          bonus += Math.floor(((totalSilver * role.valueBuff) / 100));
         } else {
           const [min, max] = role.valueBuff.split('-');
           const goldReward = randomBetweenTwoNumber(min, max);
@@ -141,17 +153,8 @@ const daily = {
         }
       });
 
-      const isStreak = checkStreak(user.dailyAttendance.lastLoginDate);
-      let streak = 1;
-      if (isStreak) {
-        streak += dailyAttendance.streak;
-      }
-      let streakBonus = streak * maxReward;
-      if (streak >= 5) {
-        streakBonus = 5 * maxReward;
-      }
+      totalSilver += silverRoleBonus;
 
-      const totalSilver = maxReward + streakBonus + silverRoleBonus;
       const body = {
         discordUserId,
         dailyAttendance: {
@@ -208,7 +211,7 @@ const giveTicket = {
       };
       const target = interaction.options.getUser('target');
       const amount = interaction.options.getNumber('amount')
-      const amountAfterTax = amount + ((amount * 10) / 100);
+      const amountAfterTax = Math.floor(amount + ((amount * 10) / 100));
       if (discordId === target.id) {
         await interaction.followUp({ embeds: [createNormalMessage(messages.preventGiveForMySelf)] });
         return;
@@ -274,7 +277,7 @@ const giveTicket = {
             return;
           }
           user.tickets.silver = user.tickets.silver - amountAfterTax;
-          userReceived.tickets.silver = userReceived.tickets.silver + amount;
+          userReceived.tickets.silver = Math.floor(userReceived.tickets.silver + amount);
           const userUpdated = await UserService.updateUser(user);
           const userReceivedUpdated = await UserService.updateUser(userReceived);
           if (
@@ -344,4 +347,52 @@ const bag = {
   }
 }
 
-module.exports = { info, tickets, daily, giveTicket, bag };
+const top = {
+  name: 'leubxh',
+  execute: async interaction => {
+    try {
+      if (!interaction) return;
+      await interaction.deferReply();
+      const discordId = interaction.member?.user?.id;
+      if (!discordId) {
+        throw Error('Không tìm thấy discordId');
+      };
+
+      const user = await UserService.getUserById(discordId);
+      if (!user || !user.discordUserId) {
+        await interaction.followUp({ embeds: [createNormalMessage(messages.unreadyRegisterBot)] });
+        return;
+      }
+      const silver = [];
+      const golden = [];
+      const gift = [];
+      const users = await UserService.getAllUser();
+      users.forEach(user => {
+        silver.push({
+          discordUserId: user.discordUserId,
+          quantity: user.tickets.silver
+        });
+        golden.push({
+          discordUserId: user.discordUserId,
+          quantity: user.tickets.gold
+        });
+        gift.push({
+          discordUserId: user.discordUserId,
+          quantity: user.giftsGiven.length
+        });
+      });
+
+      const topSilver = silver.sort((a, b) => b.quantity - a.quantity);
+      const topGolden = golden.sort((a, b) => b.quantity - a.quantity);
+      const topGift = gift.sort((a, b) => b.quantity - a.quantity);
+
+      await interaction.followUp({
+        embeds: [createUserMessage(userActionType.bxh, { topSilver, topGolden, topGift })]
+      });
+    } catch (error) {
+      console.log(error, '[bxh]');
+    }
+  }
+}
+
+module.exports = { info, tickets, daily, giveTicket, bag, top };

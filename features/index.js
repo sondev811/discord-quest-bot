@@ -3,8 +3,8 @@ const { resolveCfs, rejectCfs, resolveReply, rejectReply } = require('./confessi
 const { InteractionType, Events } = require('discord.js');
 const { help } = require('./help');
 const { register, confirmRegister } = require('./register');
-const { developing } = require('./developing');
-const { info, tickets, daily, giveTicket, bag } = require('./user');
+const { developing, maintenance } = require('./developing');
+const { info, tickets, daily, giveTicket, bag, top } = require('./user');
 const { quest, giftQuest } = require('./quest');
 const { addRoleShop, addGiftShop, shop, addQuestShop, removeItemShop } = require('./shop');
 const { addFriend, removeFriend, relationship, gift } = require('./friend');
@@ -19,10 +19,13 @@ const run = async (client) => {
       }
       if (interaction.isCommand()) {
         let command = interaction.commandName;
-        if (process.env.DEVELOPING) {
-          command = 'developing'
+        if (process.env.MAINTENANCE === 'maintenance') {
+          command = 'maintenance'
         }
-        if (interaction.member?.user?.id === process.env.DEVELOPER) {
+        if (interaction.member?.user?.id === process.env.DEVELOPER 
+          || interaction.member?.user?.id === process.env.OWNER_ID
+          || interaction.member?.user?.id === process.env.TESTER
+        ) {
           command = interaction.commandName;
         }
         
@@ -92,6 +95,12 @@ const run = async (client) => {
             break;
           case removeRole.name:
             removeRole.execute(interaction);
+            break;
+          case top.name:
+            top.execute(interaction);
+            break;
+          case maintenance.name:
+            maintenance.execute(interaction);
             break;
           default:
             developing.execute(interaction);

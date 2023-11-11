@@ -81,6 +81,10 @@ const schema = [
     name: "leubag",
     description: "Xem các túi đồ của bạn"
   },
+  {
+    name: "leubxh",
+    description: "Xem bảng xếp hạng phú hộ và tặng quà"
+  }
 ]
 
 module.exports = { schema };

@@ -83,8 +83,7 @@ const confirmRegister = {
         });
         return;
       }
-
-      const [ basicLevel ] = levels;
+      const basicLevel = levels.find(item => item.value === 1);
 
       const user = await UserService.createUser({ username, discordUserId: id, level: basicLevel});
       if (!user || !user.discordUserId) {

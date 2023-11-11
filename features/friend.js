@@ -36,13 +36,13 @@ const addFriend = {
         return;
       }
 
-      if (user.friends.length >= 5) {
-        await interaction.followUp({ embeds: [createNormalMessage(messages.friendFull)] });
+      if (user.friends.length >= user.maxFriend) {
+        await interaction.followUp({ embeds: [createNormalMessage(messages.friendFull(user.maxFriend))] });
         return;
       }
 
-      if (userReceived.friends.length >= 5) {
-        await interaction.followUp({ embeds: [createNormalMessage(messages.friendTargetFull(userReceived.discordUserId))] });
+      if (userReceived.friends.length >= userReceived.maxFriend) {
+        await interaction.followUp({ embeds: [createNormalMessage(messages.friendTargetFull(userReceived.discordUserId, userReceived.maxFriend))] });
         return;
       }
 
@@ -107,7 +107,6 @@ const addFriend = {
           const userReceivedFriend = {
             discordUserId: user.discordUserId
           }
-  
           user.friends.push(userFriend);
           userReceived.friends.push(userReceivedFriend);
   
@@ -254,17 +253,68 @@ const relationship = {
       const target = interaction.options.getUser('target');
 
       if (!target) {
-        await interaction.followUp({
+        const purchase = new ButtonBuilder()
+        .setCustomId('purchaseFriendSlot')
+        .setLabel('Mua thêm slot bạn bè')
+        .setStyle(ButtonStyle.Success);
+
+        const guide = new ButtonBuilder()
+          .setCustomId('guide')
+          .setLabel('Hướng dẫn')
+          .setStyle(ButtonStyle.Success);
+
+        const row = new ActionRowBuilder().addComponents([purchase, guide]);
+        
+        const reply = await interaction.followUp({
           embeds: [createFriendMessage(friendActionType.getAllRelationship, 
             { 
               friends: user.friends,
               username: user.username,
               gifts: user.giftsGiven,
               discordUserId: user.discordUserId,
-              avatar: interaction.user.avatar
+              avatar: interaction.user.avatar,
+              maxFriend: user.maxFriend
             }
-          )]
+          )],
+          components: [row]
         })
+        const requestAddCollect = reply.createMessageComponentCollector({
+          componentType: ComponentType.Button,
+          filter: (i) => i.user.id === interaction.user.id && (i.customId === 'purchaseFriendSlot' || i.customId === 'guide'),
+          time: 300000
+        });
+
+        requestAddCollect.on('collect', async interaction => {
+          try {
+            await interaction.deferUpdate();
+            const slotFriendPrice = 1500;
+            const customId = interaction.customId;
+            if (customId === 'purchaseFriendSlot') {
+              if (user.tickets.silver < slotFriendPrice) {
+                reply.edit({
+                  embeds: [createNormalMessage(messages.insufficientBalanceFriend(slotFriendPrice))],
+                  components: []
+                });
+                return
+              }
+              user.tickets.silver -= slotFriendPrice;
+              user.maxFriend += 1;
+              await UserService.updateUser(user);
+              reply.edit({
+                embeds: [createNormalMessage(messages.purchaseFriendSlotSuccess(user.maxFriend))],
+                components: []
+              });
+              return;
+            }
+            reply.edit({
+              embeds: [createFriendMessage(friendActionType.guide)],
+              components: []
+            });
+          } catch (error) {
+            console.log(error);
+          }
+        })
+        
         return;
       }
 

@@ -128,7 +128,9 @@ const userModel = new mongoose.Schema({
       name: { type: String, required: true },
       quantity: { type: Number, default: 0, required: true }
     }
-  ]
+  ],
+  joinVoiceDate: { type: Date, default: null },
+  maxFriend: { type: Number, default: 5 }
 });
 
 module.exports = mongoose.model('users', userModel);
