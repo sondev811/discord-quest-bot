@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const { levelSchema } = require('./level.model');
-const { ShopItemEnum } = require('./shopItem.model');
 const { ActionEnum } = require('./quest.model');
 process.env.TZ = 'Asia/Bangkok';
 
@@ -8,10 +7,20 @@ const RewardEnum = {
   SILVER_TICKET : 'silver_ticket',
   GOLD_TICKET : 'gold_ticket',
   GIFT: 'gift',
-  QUEST_RESET: 'QUEST_RESET'
+  QUEST_RESET: 'questReset'
 }
 
-const userModel = new mongoose.Schema({
+const BagItemType = {
+  GIFT: 'gift',
+  ROLE: 'role',
+  RING_PIECE: 'ringPiece',
+  WEEDING_RING: 'weedingRing',
+  RESET_QUEST: 'resetQuest',
+  FRIEND_RING: 'friendRing',
+  CERTIFICATE: 'certificate'
+}
+
+const userSchema = new mongoose.Schema({
   discordUserId: {
     type: String,
     required: true,
@@ -42,16 +51,17 @@ const userModel = new mongoose.Schema({
   ],
   itemBag: [
     {
-      id: { type: Number, required: true },
+      _id: { type: mongoose.Schema.Types.ObjectId, required: true },
       name: { type: String, required: true },
       description: { type: String, required: true },
-      type: { type: String, enum: Object.values(ShopItemEnum), required: true },
+      type: { type: String, enum: Object.values(BagItemType), required: true },
       roleId: { type: String },
       intimacyPoints: { type: Number },
       quantity: { type: Number, required: true, default: 0 },
       typeBuff: { type: String, enums: Object.values(RewardEnum) },
       valueBuff: { type: String },
-      giftEmoji: { type: String }
+      giftEmoji: { type: String },
+      specialValue: { type: Number },
     }
   ],
   totalQuestCompleted: {
@@ -123,7 +133,7 @@ const userModel = new mongoose.Schema({
   },
   giftsGiven: [
     {
-      id: { type: Number, required: true },
+      _id: { type: mongoose.Schema.Types.ObjectId, required: true },
       giftEmoji: { type: String, required: true },
       name: { type: String, required: true },
       quantity: { type: Number, default: 0, required: true }
@@ -133,4 +143,4 @@ const userModel = new mongoose.Schema({
   maxFriend: { type: Number, default: 5 }
 });
 
-module.exports = mongoose.model('users', userModel);
+module.exports = { userModel: mongoose.model('users', userSchema), BagItemType};

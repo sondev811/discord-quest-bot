@@ -27,12 +27,16 @@ const shopActionType = {
   getGiftShop: 'getGiftShop',
   getRoleShop: 'getRoleShop',
   getQuestShop: 'getQuestShop',
+  getImShop: 'getImShop',
   getDetailGift: 'getDetailGift',
   getDetailRole: 'getDetailRole',
+  getDetailIntimacy: 'getDetailIntimacy',
   purchaseSuccess: 'purchaseSuccess',
   removeGift: 'removeGift',
   removeRole: 'removeRole',
   removeQuest: 'removeQuest',
+  guideIntimacyShop: 'guideIntimacyShop',
+  sendResultPurchaseIntimacyShop: 'sendResultPurchaseIntimacyShop'
 }
 
 const friendActionType = {
@@ -40,7 +44,9 @@ const friendActionType = {
   getAllRelationship: 'getAllRelationship',
   getRelationship: 'getRelationship',
   gift: 'gift',
-  guide: 'guide'
+  guide: 'guide',
+  guideCraft: 'guideCraft',
+  marrySuccess: 'marrySuccess'
 }
 
 const questActionType = {
@@ -86,24 +92,48 @@ const currency = {
 }
 
 const emoji = {
-  blank: '<:BLANK:1171878207876771921>',
-  redDot: '<a:emoji_354:1172023465444900905>',
-  yellowDot: '<a:emoji_353:1172023449242316881>',
-  greenDot: '<a:emoji_357:1172030794546544721>',
-  giftBox: '<a:leu_gift:1171860063900684378>',
+  blank: '<:blank:1175360700093317221>',
+  redDot: '<a:reddot:1175047555885842472>',
+  imPoint: '<a:intimacyPoint:1175364182816849990>',
+  giftBox: '<a:gift_box:1174301397886439484>',
+  checked: '<a:checked:1174312599085650000>',
+  weddingRing: '<:wedding_ring:1175357600708186112>',
+  weddingTreasure: '<a:weddingreasure:1175353026555416586>',
+  friendTreasure: '<a:friendtreasure:1175353021635498116>',
+  weddingScroll: '<:scroll_wedding:1175357593963741225>',
+  weddingResource: '<:resource:1175357590486650900>',
+  giftShop: '<a:gift_shop:1175361765530419300>',
+  roleShop: '<a:roles_shop:1175361769317863424>',
+  questShop: '<a:quest_shop:1175361771180146710>',
+  pointShop: '<a:point_shop:1175362917244358676>',
+  fiveDot: '<a:dots:1175372021807468564>',
+  yellowDot: '<a:yellowDot:1175372027377504327>',
+  greenDot: '<a:greenDot:1175372023611019285>',
+  ruby: '<a:ruby:1175373347945730068>',
+  ruby2: '<a:ruby2:1175373355730358352>',
+  royal: '<a:royal:1175374507507191838>',
+  nitro: '<a:nitro:1175374516768223272>',
+  fiveDotX: '<a:fiveDotX:1175374510137028618>',
+  fix: '<a:pepehacker:1175374728748347463>',
+  certificate: '<:certificate:1175398855672598608>',
+// ----------------------------------
   silverTicket: '<:leu_ticket:1168509616938815650>',
   goldenTicket: '<:leu_ticket_vang:1169279388370604062>',
-  fiveDot: '<a:Leu_dots:1171861138812698654>',
-  checked: '<a:check:1081693873807556648>',
-  ruby: '<a:leu_ruby2:1166533946604007464>',
-  warning: '<a:__:1081693459771039774>',
-  imPoint: '<a:Leu_blue_hearts:1171862703384572024>',
-  nitro: '<a:nitro:1137269463209742388>',
-  fiveDotX: '<a:leu_Dancing_Lines:1171864141301039167>',
   shopItem: '<:leu_sieuthi:1171863524251795557>',
-  fix: '<a:pepehacker:1081853612768108564>',
-  royal: '<a:Royalrole:1159214875936034956>',
-  ruby2: '<a:leu_ruby3:1166534072894505080>',
+}
+
+const friendshipData = {
+  friend: 'đang là **bạn bè**',
+  bestFriend: `đang là **bạn thân**`,
+  soulmate: 'đang là **tri kỷ**',
+  married: 'đã **kết hôn**',
+}
+
+const friendshipName = {
+  friend: 'bạn bè',
+  bestFriend: `bạn thân`,
+  soulmate: 'tri kỷ',
+  married: 'kết hôn',
 }
 
 const levelImage = {
@@ -146,5 +176,7 @@ module.exports = {
   emoji,
   levelImage,
   imageCommand,
-  rankingTrophy
+  rankingTrophy,
+  friendshipData,
+  friendshipName
 };

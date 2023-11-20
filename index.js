@@ -23,7 +23,7 @@ const client = new Client(
       GatewayIntentBits.DirectMessageTyping,
       GatewayIntentBits.DirectMessageReactions
     ], 
-    allowedMentions: { parse: ['roles'], repliedUser: false },
+    allowedMentions: { parse: ['roles', 'users'], repliedUser: false },
     partials: [Partials.Channel]
   }
 );
@@ -88,6 +88,39 @@ const commands = [
     ).addNumberOption(option => option.setName('price_gold').
       setDescription('Giá ticket vàng trên shop(có thể không set trường này nếu item này không cho mua bằng vé vàng)')
     ),
+    new SlashCommandBuilder()
+    .setName('admin-add-role-intimacy-shop')
+    .setDescription('Thêm role vào shop thân mật(Chỉ chủ server mới có quyền)')
+    .addRoleOption(option => option.setName('role')
+      .setDescription('Role')
+      .setRequired(true)
+    )
+    .addStringOption(option => option.setName('buff')
+      .setDescription('Chọn loại buff')
+      .setRequired(true)
+      .setChoices(
+        {
+          name: 'Buff vé xanh',
+          value: 'silver_ticket'
+        },
+        {
+          name: 'Buff vé vàng',
+          value: 'gold_ticket'
+        }
+      )
+    )
+    .addStringOption(option => option.setName('value')
+      .setDescription('Số lượng buff đối với vé xanh sẽ là % và vé vàng là 2 số(ví dụ: 5-10)')
+      .setRequired(true)
+    )
+    .addNumberOption(option => option.setName('point')
+      .setDescription('Số điểm thân mật bán trên shop')
+      .setRequired(true)
+    )
+    .addNumberOption(option => option.setName('silver_price')
+      .setDescription('Số vé xanh bán trên shop')
+      .setRequired(true)
+  ),
   new SlashCommandBuilder().setName('admin-add-role').setDescription('Thêm role buff daily(Chỉ chủ server mới có quyền)')
     .addRoleOption(option => option.setName('role')
       .setDescription('Role')
@@ -111,7 +144,7 @@ const commands = [
       setDescription('Số lượng buff đối với vé xanh sẽ là % và vé vàng là 2 số(ví dụ: 5-10)').
       setRequired(true)
     ),
-  new SlashCommandBuilder().setName('admin-add-gift-quest').setDescription('Thêm hoặc chỉnh sửa % rate quà nhiệm vụ tuần(Chỉ chủ server mới có quyền)'),
+  new SlashCommandBuilder().setName('admin-edit-gift-drop-rate').setDescription('Chỉnh sửa % rate quà nhiệm vụ tuần(Chỉ chủ server mới có quyền)'),
   new SlashCommandBuilder().setName('admin-add-quest-shop').setDescription('Thêm quest item vào shop(Chỉ chủ server mới có quyền)')
     .addStringOption(option => option.setName('item')
       .setDescription('Emoji(dạng <:leu_ticket:1168509616938815650>). Sử dụng \\\:tênEmoji: để lấy được định dạng trên')
@@ -151,8 +184,8 @@ const commands = [
     ),
   new SlashCommandBuilder().setName('admin-remove-item-shop').setDescription('Xóa item trong shop(Chỉ chủ server mới có quyền)'),
   new SlashCommandBuilder().setName('admin-remove-role').setDescription('Xóa role buff daily(Chỉ chủ server mới có quyền)'),
-  new SlashCommandBuilder().setName('leubxh').setDescription('Xem bảng xếp hạng phú hộ và tặng quà')
-
+  new SlashCommandBuilder().setName('leubxh').setDescription('Xem bảng xếp hạng phú hộ, cặp đôi và độ chăm chỉ')
+  
 ].map(command => command.toJSON());
 
 client.once(Events.ClientReady, async () => {
@@ -228,7 +261,7 @@ client.on(Events.MessageCreate, async (message) => {
           message.channel.parentId === quest.placeChannel &&
           message.channel.isThread()
       ) {
-        if (quest.progress < quest.completionCriteria && message.channel.messages.cache.size > 1) {
+        if (quest.progress < quest.completionCriteria) {
           quest.progress = quest.progress + 1;
         }
       }
@@ -247,25 +280,19 @@ client.on(Events.ThreadCreate, async (thread) => {
     if (!user || !user.discordUserId) return;
 
     const questToUpdate = user.quests.dailyQuestsReceived.quests.find(
-      quest => (quest.action === ActionEnum.POST_CONFESSION ||
-      quest.action === ActionEnum.POST_BLOG) && 
-      thread.parentId === quest.placeChannel
+      quest => quest.action === ActionEnum.POST_BLOG && thread.parentId === quest.placeChannel
     );
 
     if (questToUpdate && questToUpdate.progress < questToUpdate.completionCriteria) {
-      let newProgress = questToUpdate.progress + 1;
-      await UserService.updateDailyQuest(thread.ownerId, questToUpdate.questId, newProgress);
+      await UserService.updateDailyQuest(thread.ownerId, questToUpdate.questId);
     }
 
     const questToWeekUpdate = user.quests.weekQuestsReceived.quests.find(
-      quest => (quest.action === ActionEnum.POST_CONFESSION ||
-      quest.action === ActionEnum.POST_BLOG) && 
-      thread.parentId === quest.placeChannel
+      quest => quest.action === ActionEnum.POST_BLOG &&  thread.parentId === quest.placeChannel
     );
 
     if (questToWeekUpdate && questToWeekUpdate.progress < questToWeekUpdate.completionCriteria) {
-      let newProgress = questToWeekUpdate.progress + 1;
-      await UserService.updateWeekQuest(thread.ownerId, questToWeekUpdate.questId, newProgress);
+      await UserService.updateProgressWeekQuest(thread.ownerId, questToWeekUpdate.questId);
     }
   } catch (error) {
     console.log(error);    

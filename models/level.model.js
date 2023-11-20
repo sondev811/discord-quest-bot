@@ -5,7 +5,8 @@ const levelSchema = new mongoose.Schema({
   value: { type: Number, required: true }, 
   limitTicketDaily: { type: Number, required: true }, 
   limitQuestQuantity: { type: Number, required: true },
-  priceUpgrade: { type: Number, required: true }
+  priceUpgrade: { type: Number, required: true },
+  priceGoldUpgrade: { type: Number }
 });
 
 const levelModel = mongoose.model('level', levelSchema);

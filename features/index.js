@@ -1,12 +1,10 @@
-const { confession, createConfession, submitConfession, replyConfession, submitReplyConfession } = require('./confession/confession');
-const { resolveCfs, rejectCfs, resolveReply, rejectReply } = require('./confession/reviewCfs');
 const { InteractionType, Events } = require('discord.js');
 const { help } = require('./help');
 const { register, confirmRegister } = require('./register');
 const { developing, maintenance } = require('./developing');
 const { info, tickets, daily, giveTicket, bag, top } = require('./user');
 const { quest, giftQuest } = require('./quest');
-const { addRoleShop, addGiftShop, shop, addQuestShop, removeItemShop } = require('./shop');
+const { addRoleShop, addGiftShop, shop, addQuestShop, removeItemShop, addRoleIntimacyShop } = require('./shop');
 const { addFriend, removeFriend, relationship, gift } = require('./friend');
 const { addRole, removeRole } = require('./role');
 
@@ -30,9 +28,6 @@ const run = async (client) => {
         }
         
         switch (command) {
-          case confession.name:
-            confession.execute(interaction);
-            break;
           case help.name:
             help.execute(interaction);
             break;
@@ -84,9 +79,6 @@ const run = async (client) => {
           case addRole.name:
             addRole.execute(interaction);
             break;
-          case giftQuest.name:
-            giftQuest.execute(interaction);
-            break;
           case addQuestShop.name: 
             addQuestShop.execute(interaction);
             break;
@@ -98,6 +90,12 @@ const run = async (client) => {
             break;
           case top.name:
             top.execute(interaction);
+            break;
+          case giftQuest.name:
+            giftQuest.execute(interaction);
+            break;
+          case addRoleIntimacyShop.name:
+            addRoleIntimacyShop.execute(interaction);
             break;
           case maintenance.name:
             maintenance.execute(interaction);
@@ -122,26 +120,7 @@ const run = async (client) => {
         if (action && value) {
           customId = action;
         }
-        console.log(customId, value, 'buttonClicked');
         switch (customId) {
-          case resolveCfs.name:
-            resolveCfs.execute(interaction);
-            break;
-          case rejectCfs.name:
-            rejectCfs.execute(interaction);
-            break;
-          case createConfession.name:
-            createConfession.execute(interaction, value);
-            break;
-          case replyConfession.name:
-            replyConfession.execute(interaction);
-            break;
-          case resolveReply.name:
-            resolveReply.execute(interaction, value);
-            break;
-          case rejectReply.name:
-            rejectReply.execute(interaction, value);
-            break;
           case confirmRegister.name:
             confirmRegister.execute(interaction);
             break;
@@ -151,37 +130,9 @@ const run = async (client) => {
       }
     } catch (error) {
       console.error('An error occurred during button handling:', error);
-      interaction.followUp('Có lỗi xảy ra trong quá trình xử lý.');
     }
   });
-
-  // Handle modals
-  client.on(Events.InteractionCreate, async (interaction) => {
-    try {
-      if (interaction.type === InteractionType.ModalSubmit) {
-        const [action, value] = interaction.customId.split(':');
-        let customId = interaction.customId;
-        if (action && value) {
-          customId = action;
-        }
-        console.log(customId, value, 'modalSubmit');
-        switch (customId) {
-          case submitConfession.name:
-            submitConfession.execute(interaction, value);
-            break;
-          case submitReplyConfession.name:
-            submitReplyConfession.execute(interaction);
-            break;
-          default:
-            break;
-        }
-      }
-    } catch (error) {
-      console.error('An error occurred during modal handling:', error);
-      interaction.followUp('Có lỗi xảy ra trong quá trình xử lý.');
-    }
-  });
-
+  
 }
 
 module.exports = { run };

@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require("@discordjs/builders");
-const { userActionType, emoji, imageCommand, levelImage, rankingTrophy } = require("../constants/general");
+const { userActionType, emoji, imageCommand, levelImage, rankingTrophy, friendshipData } = require("../constants/general");
 const { RewardEnum, ActionEnum } = require("../models/quest.model");
 const { roundAndFormat } = require("../utils");
 
@@ -10,7 +10,7 @@ const renderFriendList = (friends) => {
     if (index !== 0 && index !== friends.length) {
       value += '\n';
     }
-    value+= `${emoji.redDot}<@${friend.discordUserId}> - ${level(friend.intimacyPoints)} - Điểm thân thiết: ${friend.intimacyPoints} ${emoji.imPoint}`
+    value+= `${emoji.redDot}<@${friend.discordUserId}> - ${friendshipData[friend.relationship]} - Điểm tm:${friend.intimacyPoints} ${emoji.imPoint}`
   });
   return value;
 }
@@ -55,10 +55,19 @@ const renderGiftBag = (gifts) => {
   return data;
 }
 
+const renderSpecialBag = (specialItems) => {
+  if (!specialItems.length) return `${emoji.blank}${emoji.blank}Chưa có vật phẩm trong túi\n`
+  let data = '';
+  specialItems.forEach((item, index) => {
+    data += `${emoji.blank}${emoji.fiveDot}${item.giftEmoji} ${item.name} » Số lượng: ${item.quantity}\n${emoji.blank}» Chức năng: ${item.description}${index === specialItems.length - 1? '\n' : '\n\n'}`
+  })
+  return data;
+}
+
 const roleBonusRender = (roles) => {
   let render = ''
   roles.forEach(role => {
-    render += `${emoji.blank}${emoji.fiveDot}<@&${role.roleId}>: +${role.valueBuff} ${role.typeBuff === RewardEnum.SILVER_TICKET ? `% ${emoji.silverTicket}` : emoji.goldenTicket} \n`
+    render += `${emoji.blank}${emoji.fiveDot}${role.roleId ? `<@&${role.roleId}>` : `${role.emoji} ${role.name}`}: +${role.valueBuff} ${role.typeBuff === RewardEnum.SILVER_TICKET ? `% ${emoji.silverTicket}` : emoji.goldenTicket} \n`
   })
   return render;
 }
@@ -69,7 +78,7 @@ const ranking = (rankings) => {
   for(let rank of rankings) {
     if (index > 20) break;
     if (rank.quantity > 0) {
-      render +=  '``Top '+ index +'``' + `<@${rank.discordUserId}>: ${rank.quantity} ${rank.type === RewardEnum.SILVER_TICKET ? emoji.silverTicket : emoji.goldenTicket }\n`
+      render +=  '``Top '+ index +'``' + `<@${rank.discordUserId}>: ${rank.quantity} ${rank.type === RewardEnum.SILVER_TICKET ? emoji.silverTicket : rank.type === 'completedQuest' ? 'nhiệm vụ' : emoji.goldenTicket }\n`
       index++;
     }
   }
@@ -77,6 +86,7 @@ const ranking = (rankings) => {
 }
 
 const rankingCouple = (rankings) => {
+  if(rankings.length === 0) return 'Server chưa có cặp đôi nào.'
   let index = 1;
   let render = '';
   for(let rank of rankings) {
@@ -117,7 +127,7 @@ const createUserMessage = (type, body = {}) => {
             value: `${emoji.redDot} ${body?.boostTime ? body.boostTime : 'Không'}`,
           },
           {
-            name: `💗 Các mối quan hệ`,
+            name: `${emoji.pointShop} Các mối quan hệ`,
             value: renderFriendList(body.friends)
           }
         ])
@@ -173,7 +183,7 @@ const createUserMessage = (type, body = {}) => {
       .setAuthor({
         name: "Túi vật phẩm"
       })
-      .setDescription(`<:leu_summer_admin:1159226093350440980>Role:\n\n ${renderRoleBag(body.roles)}─────────────────────────\n<:leu_Bouquet:1169290758772244550>Quà tặng:\n\n${renderGiftBag(body.gifts)}─────────────────────────\n<:leu_tag:1159222957793615943> Vật phẩm nhiệm vụ:\n\n${renderGiftBag(body.questItems)}`)
+      .setDescription(`${emoji.roleShop} Role:\n\n ${renderRoleBag(body.roles)}─────────────────────────\n${emoji.giftBox} Quà tặng:\n\n${renderGiftBag(body.gifts)}─────────────────────────\n${emoji.ruby} Vật phẩm nhiệm vụ:\n\n${renderGiftBag(body.questItems)}─────────────────────────\n${emoji.ruby2} Vật phẩm đặc biệt:\n\n${renderSpecialBag(body.specialItems)}`)
       .setColor(0xe59b9b)
       .setThumbnail(imageCommand.bag)
       .setFooter({ 
@@ -210,17 +220,5 @@ const createUserMessage = (type, body = {}) => {
   }
   return embed;
 };
-
-const level = (point) => {
-  if (point <= 500) {
-    return 'Bạn bè';
-  } 
-  if (point <= 1000) {
-    return 'Bạn thân';
-  }
-  if (point > 1000) {
-    return 'Tri kỷ';
-  }
-}
 
 module.exports = { createUserMessage };

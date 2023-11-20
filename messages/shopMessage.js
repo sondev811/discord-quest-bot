@@ -1,10 +1,11 @@
 const { EmbedBuilder } = require("@discordjs/builders");
 const { shopActionType, emoji, imageCommand } = require("../constants/general");
+const { intimacyShopType } = require("../models/intimacyShop");
 
 const renderGift = (gifts) => {
   let data = '';
   gifts.forEach(gift => {
-    data += ` ${emoji.shopItem} ${gift.giftEmoji} ` + '``'+ gift.name +'``' + ` » ${gift.priceSilver} ${emoji.silverTicket} | ${gift.priceGold} ${emoji.goldenTicket} » ${gift.intimacyPoints} thân mật ${emoji.imPoint}\n\n`
+    data += ` ${emoji.shopItem} ${gift.giftInfo.giftEmoji} ` + '``'+ gift.giftInfo.name +'``' + ` » ${gift.priceSilver} ${emoji.silverTicket} | ${gift.priceGold} ${emoji.goldenTicket} » ${gift.giftInfo.intimacyPoints} thân mật ${emoji.imPoint}\n\n`
   })
   return data;
 }
@@ -12,7 +13,7 @@ const renderGift = (gifts) => {
 const renderRole = (roles) => {
   let data = '';
   roles.forEach(role => {
-    data += ` ${emoji.shopItem} <@&${role.roleId}> » ${role.priceSilver} ${emoji.silverTicket} ${role.priceGold !== null ? `| ${role.priceGold} ${emoji.goldenTicket}` : ''}` + `» ${role.description}\n\n`;
+    data += ` ${emoji.shopItem} <@&${role.roleInfo.roleId}> » ${role.priceSilver} ${emoji.silverTicket} ${role.priceGold !== null ? `| ${role.priceGold} ${emoji.goldenTicket}` : ''}` + `» ${role.roleInfo.description}\n\n`;
   })
   return data;
 }
@@ -20,7 +21,25 @@ const renderRole = (roles) => {
 const renderQuestItem = (questItems) => {
   let data = '';
   questItems.forEach(item => {
-    data += ` ${emoji.shopItem} ${item.giftEmoji} ` + '``'+ item.name +'``' + ` » ${item.priceSilver} ${emoji.silverTicket} | ${item.priceGold} ${emoji.goldenTicket}\n\n`
+    data += ` ${emoji.shopItem} ${item.questItem.emoji} ` + '``'+ item.questItem.name +'``' + ` » ${item.priceSilver} ${emoji.silverTicket} | ${item.priceGold} ${emoji.goldenTicket}\n\n`
+  })
+  return data;
+}
+
+const renderImItem = (intimacyItem) => {
+  let data = '';
+  intimacyItem.forEach(item => {
+    const name = item.type === intimacyShopType.treasureBox ? item.treasureBoxInfo.name : item.specialInfo.name;
+    const price = `${item.silverTicket ? `${item.intimacyPrice}${emoji.imPoint} + ${item.silverTicket}${emoji.silverTicket}` : item.intimacyPrice + emoji.imPoint}`;
+    data += ` ${emoji.shopItem} ${ item.type === intimacyShopType.treasureBox ? item.treasureBoxInfo.emoji : item.specialInfo.emoji} ` + '``'+ name +'``' + ` » ${price}\n\n`
+  })
+  return data;
+}
+
+const renderGiftReward = (gifts) => {
+  let data = '';
+  gifts.forEach((gift, index) => {
+    data += '``x' + gift.quantity + '``' + gift.giftEmoji + gift.name + `${index < gifts.length - 1 ? ', ' : ''}`;
   })
   return data;
 }
@@ -34,7 +53,7 @@ const createShopMessage = (type, body = {}) => {
         name: `Cửa hàng Làng`,
         iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
       })
-      .setDescription(`<:leu_Bouquet:1169290758772244550> Cửa hàng quà tặng:\n${emoji.blank}${emoji.redDot} Bán các món quà sử dụng để tặng bạn bè\n\n<:leu_roles:1172197216690118698> Cửa hàng role:\n${emoji.blank}${emoji.redDot} Bán các loại role trong server\n\n <:leu_tag:1159222957793615943> Cửa hàng vật phẩm nhiệm vụ:\n${emoji.blank}${emoji.redDot} Bán các loại vật phẩm làm nhiệm vụ và vé làm mới nhiệm vụ\n\n─────────────────────────\nSố vé bạn đang có: \n${emoji.redDot} Vé xanh: ${body.silver} ${emoji.silverTicket}\n${emoji.redDot} Vé vàng: ${body.gold} ${emoji.goldenTicket}`)
+      .setDescription(`${emoji.giftShop} Cửa hàng quà tặng:\n${emoji.blank}${emoji.redDot} Bán các món quà sử dụng để tặng bạn bè\n\n${emoji.roleShop} Cửa hàng role:\n${emoji.blank}${emoji.redDot} Bán các loại role trong server\n\n ${emoji.questShop} Cửa hàng vật phẩm nhiệm vụ:\n${emoji.blank}${emoji.redDot} Bán các loại vật phẩm làm nhiệm vụ và vé làm mới nhiệm vụ\n\n ${emoji.pointShop} Cửa hàng điểm thân thiết:\n${emoji.blank}${emoji.redDot} Bán role, rương vật phẩm đặc biệt bằng điểm thân thiết\n\n─────────────────────────\nSố vé bạn đang có: \n${emoji.redDot} Vé xanh: ${body.silver} ${emoji.silverTicket}\n${emoji.redDot} Vé vàng: ${body.gold} ${emoji.goldenTicket}`)
       .setColor(0xe59b9b)
       .setFooter({ 
         text: `Bot Làng • discord.gg/langleuleuliuliu`
@@ -82,6 +101,20 @@ const createShopMessage = (type, body = {}) => {
       })
       .setTimestamp();
       break;
+    case shopActionType.getImShop:
+      embed = new EmbedBuilder()
+      .setAuthor({
+        name: `Cửa hàng điểm thân mật`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setDescription(renderImItem(body.intimacyItem)+ `─────────────────────────\n${emoji.redDot} Số điểm thân thiết đang có với <@${body.friend.discordUserId}>: ${body.friend.intimacyPoints}${emoji.imPoint}`)
+      .setColor(0xe59b9b)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`
+      })
+      .setTimestamp();
+      break;
+      break;
     case shopActionType.getDetailGift:
       embed = new EmbedBuilder()
       .setAuthor({
@@ -102,6 +135,23 @@ const createShopMessage = (type, body = {}) => {
         iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
       })
       .setDescription(`${emoji.redDot} Tên vật phẩm: <@&${body.roleId}>\n\n${emoji.redDot} Giá vật phẩm: ${body.priceSilver} ${emoji.silverTicket}${body.priceGold ? ` | ${body.priceGold} ${emoji.goldenTicket}` : ''} \n\n » ${body.description}\n─────────────────────────\nSố vé bạn đang có:\n${emoji.redDot} Vé xanh: ${body.silver} ${emoji.silverTicket}\n${emoji.redDot} Vé vàng: ${body.gold} ${emoji.goldenTicket}`)
+      .setColor(0xe59b9b)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`
+      })
+      .setTimestamp();
+      break;
+    case shopActionType.getDetailIntimacy:
+      const name = body.item.type === intimacyShopType.specialItem ? `${body.item.specialInfo.emoji} ${body.item.specialInfo.name}` : `${body.item.treasureBoxInfo.emoji} ${body.item.treasureBoxInfo.name}`;
+      const price = `${body.item.silverTicket ? `${body.item.intimacyPrice}${emoji.imPoint} + ${body.item.silverTicket}${emoji.silverTicket}` : body.item.intimacyPrice + emoji.imPoint}`;
+      const des = body.item.type === intimacyShopType.treasureBox ? body.item.treasureBoxInfo.description : body.item.specialInfo.description
+
+      embed = new EmbedBuilder()
+      .setAuthor({
+        name: `Thông tin vật phẩm`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setDescription(`${emoji.redDot} Tên vật phẩm: ${name}\n\n${emoji.redDot} Giá vật phẩm: ${price} \n\n » ${des}\n─────────────────────────\n${emoji.redDot} Số điểm thân thiết đang có với <@${body.friend.discordUserId}>: ${body.friend.intimacyPoints}${emoji.imPoint}\n\n ${emoji.redDot} Đây là điểm chung nên cần sự chấp nhận của 2 người, nếu vật phẩm mua có yêu cầu vé xanh thì số vé sẽ chia đôi. Khi mua bot sẽ gửi yêu cầu <@${body.friend.discordUserId}> xác nhận. \n ${emoji.redDot}` +  '``Lưu ý: Đọc kỹ hướng dẫn trước khi mua đồ trong shop này.``')
       .setColor(0xe59b9b)
       .setFooter({ 
         text: `Bot Làng • discord.gg/langleuleuliuliu`
@@ -153,7 +203,33 @@ const createShopMessage = (type, body = {}) => {
         name: `Xóa vật phẩm nhiệm vụ`,
         iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
       })
-      .setDescription(renderGift(body.quests))
+      .setDescription(renderQuestItem(body.quests))
+      .setColor(0xe59b9b)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`
+      })
+      .setTimestamp();
+      break;
+    case shopActionType.guideIntimacyShop:
+      embed = new EmbedBuilder()
+      .setAuthor({
+        name: `Hướng dẫn cửa hàng điểm thân mật`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setDescription(`${emoji.redDot} Điểm thân mật là điểm chung nên cần sự chấp nhận của 2 người. Khi mua bot sẽ gửi yêu cầu xác nhận tới người bạn còn lại.\n ${emoji.redDot} Số điểm thân thiết của 2 bạn sẽ bị trừ, nếu vật phẩm mua có yêu cầu vé xanh thì số vé sẽ chia đôi.\n${emoji.redDot} Rương tình bạn sẽ chứa ngẫu nhiên 3 món quà tặng, role tình bạn và nhẫn tình bạn.\n${emoji.blank} » Đối với 3 món quà ngẫu nhiên thì 2 bạn đều nhận được.\n${emoji.blank} » Đối với role thì có tỉ lệ nhận được hoặc không, nếu có thì cả 2 bạn đều nhận được. \n${emoji.blank} » Đối với nhẫn tình bạn thì luôn mở ra nhưng sẽ ngẫu nhiên một trong hai người nhận được. \n${emoji.redDot} Rương kết hôn sẽ chứa ngẫu nhiên 3 món quà tặng và vật phẩm đặc biệt dùng để ghép nhẫn kết hôn.\n${emoji.blank} » Đối với 3 món quà ngẫu nhiên thì 2 bạn đều nhận được. \n${emoji.blank} » Đối vật phẩm đặc biệt dùng để ghép nhẫn kết hôn sẽ bao gồm nguyên liệu chế tạo và bản chế tạo nhẫn. Người nhấn mua sẽ nhận được một trong hai vật phẩm này.`)
+      .setColor(0xe59b9b)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`
+      })
+      .setTimestamp();
+      break;
+    case shopActionType.sendResultPurchaseIntimacyShop:
+      embed = new EmbedBuilder()
+      .setAuthor({
+        name: `Phần thưởng mở ${body.treasureName}`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setDescription(`${emoji.redDot}<@${body.username}> nhận được ${body.silver > 0 ? `${body.silver}${emoji.silverTicket}, ` : ''} ${body.gold > 0 ? `${body.gold}${emoji.goldenTicket},` : ''} ${renderGiftReward(body.gifts)}${body.userSpecialItem ? ', ``x1``' + `${body?.userSpecialItem?.emoji}${body?.userSpecialItem?.name}` : ''}${body.roleData ? `, Role ${body.roleData}` : ''}\n\n${emoji.redDot}<@${body.friendUserName}> nhận được ${body.silver > 0 ? `${body.silver}${emoji.silverTicket}, ` : ''} ${body.gold > 0 ? `${body.gold}${emoji.goldenTicket},` : ''} ${renderGiftReward(body.gifts)}${body.friendSpecialItem ? ', ``x1``' + `${body?.friendSpecialItem?.emoji}${body?.friendSpecialItem?.name}` : ''}${body.roleData ? `, Role ${body.roleData}` : ''}. \n\n ${emoji.redDot} Hai bạn còn ${body.point}${emoji.imPoint}`)
       .setColor(0xe59b9b)
       .setFooter({ 
         text: `Bot Làng • discord.gg/langleuleuliuliu`
@@ -161,7 +237,7 @@ const createShopMessage = (type, body = {}) => {
       .setTimestamp();
       break;
     default:
-    break;
+      break;
   }
   return embed;
 };

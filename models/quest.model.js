@@ -22,7 +22,7 @@ const RewardEnum = {
   SILVER_TICKET : 'silver_ticket',
   GOLD_TICKET : 'gold_ticket',
   GIFT: 'gift',
-  QUEST_RESET: 'QUEST_RESET'
+  QUEST_RESET: 'questReset'
 }
 
 const questSchema = new mongoose.Schema({

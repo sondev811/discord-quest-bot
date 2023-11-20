@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
-const giftQuest = new mongoose.Schema({
-  id: { type: Number },
+const giftSchema = new mongoose.Schema({
   name: { type: String, required: true },
   type: { type: String, default: 'gift'},
   description: { type: String, required: true },
@@ -10,4 +9,6 @@ const giftQuest = new mongoose.Schema({
   dropRate: { type: Number, default: 0 }
 });
 
-module.exports = {giftQuestModel: mongoose.model('giftQuest', giftQuest)};
+giftSchema.add({ id: { type: Number, default: 1 } });
+
+module.exports = { giftModel: mongoose.model('gifts', giftSchema), giftSchema };

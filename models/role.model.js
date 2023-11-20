@@ -11,4 +11,4 @@ const roleSchema = new mongoose.Schema({
 
 roleSchema.add({ id: { type: Number, default: 1 } });
 
-module.exports = {roleModel: mongoose.model('roles', roleSchema)};
+module.exports = { roleModel: mongoose.model('roles', roleSchema), roleSchema };

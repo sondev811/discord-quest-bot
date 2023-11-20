@@ -1,5 +1,5 @@
 const { errors } = require("../constants/general");
-const userModel = require("../models/user.model");
+const { userModel } = require("../models/user.model");
 const customTimeout = 20000;
 
 class UserService {
@@ -37,26 +37,44 @@ class UserService {
     }
   }
 
-  static async updateDailyQuest(userId, questId, newProgress) {
+  static async updateDailyQuest(discordUserId, questId) {
     try {
-      const user = await userModel.findOne({ discordUserId: userId });
-      
-      if (!user) {
+      const updatedUser = await userModel.findOne({ discordUserId });
+    
+      if (!updatedUser) {
         throw new Error("User not found");
       }
-  
-      const questIndex = user.quests.dailyQuestsReceived.quests.findIndex(
+
+      // Sắp xếp mảng quests theo questId
+      updatedUser.quests.dailyQuestsReceived.quests.sort((a, b) => a.questId.localeCompare(b.questId));
+
+      const questIndex = updatedUser.quests.dailyQuestsReceived.quests.findIndex(
         (quest) => quest.questId === questId
       );
-  
+
       if (questIndex === -1) {
         throw new Error("Quest not found");
       }
-  
-      user.quests.dailyQuestsReceived.quests[questIndex].progress = newProgress;
-  
-      await user.save();
-  
+
+      // Cập nhật progress
+      updatedUser.quests.dailyQuestsReceived.quests[questIndex].progress += 1;
+
+      // Lưu lại người dùng
+      await updatedUser.save();
+
+      console.log(updatedUser.quests.dailyQuestsReceived.quests);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  static async updateProgressWeekQuest(discordUserId, questId) {
+    try {
+      const updatedUser = await userModel.findOneAndUpdate(
+        { discordUserId, 'quests.weekQuestsReceived.quests.questId': questId },
+        { $inc: { 'quests.weekQuestsReceived.quests.$.progress': 1 } },
+        { new: true }
+      );
     } catch (error) {
       console.error(error);
     }

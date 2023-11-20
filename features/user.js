@@ -1,16 +1,17 @@
 const { ButtonBuilder, ActionRowBuilder, SelectMenuOptionBuilder, StringSelectMenuOptionBuilder, StringSelectMenuBuilder } = require("@discordjs/builders");
 const connectDB = require("../DB/connection");
-const { userActionType, errors } = require("../constants/general");
+const { userActionType, errors, emoji } = require("../constants/general");
 const messages = require("../constants/messages");
 const { createNormalMessage } = require("../messages/normalMessage");
 const { createUserMessage } = require("../messages/userMessage");
-const { ShopItemEnum } = require("../models/shopItem.model");
 const { UserService } = require("../services/user.service");
-const { convertTimestamp, checkingLastAttended, checkStreak, findRoleBuff, randomBetweenTwoNumber, getCurrentTime } = require("../utils/index");
-const { ButtonStyle, ComponentType } = require("discord.js");
+const { checkingLastAttended, checkStreak, findRoleBuff, randomBetweenTwoNumber, getCurrentTime, convertDateTime } = require("../utils/index");
+const { ButtonStyle, ComponentType, ChannelType } = require("discord.js");
 const { RoleService } = require("../services/role.service");
 const { RewardEnum } = require("../models/quest.model");
 const { FriendService } = require("../services/friend.service");
+const { BagItemType } = require("../models/user.model");
+const { typeBuffSpecial } = require("../models/specialItem.model");
 connectDB();
 process.env.TZ = 'Asia/Bangkok';
 
@@ -33,14 +34,25 @@ const info = {
       }
 
       const { username, discordUserId, friends } = user;
+      const modifierFriends = []
+      for(const friend of friends) {
+        const getRelationship = await FriendService.getRelationShip(discordUserId, friend.discordUserId);
+        modifierFriends.push(
+          {
+            discordUserId: friend.discordUserId,
+            relationship: getRelationship.relationship.name,
+            intimacyPoints: friend.intimacyPoints
+          }
+        );
+      }
       const body = {
         username,
         discordUserId,
         displayName: interaction.member?.displayName,
-        joinedServer: convertTimestamp(interaction.member?.joinedTimestamp),
-        boostTime: convertTimestamp(interaction.member?.premiumSinceTimestamp),
+        joinedServer: convertDateTime(interaction.member?.joinedTimestamp),
+        boostTime: convertDateTime(interaction.member?.premiumSinceTimestamp),
         avatar: `https://cdn.discordapp.com/avatars/${discordUserId}/${avatar}.png`,
-        friends: friends.sort((a, b) => a.intimacyPoints - b.intimacyPoints)
+        friends: modifierFriends.sort((a, b) => a.intimacyPoints - b.intimacyPoints)
       }
 
       await interaction.followUp({
@@ -110,9 +122,11 @@ const daily = {
         return;
       }
 
-      const { roles, gifts } = filterItem(itemBag);
+      const { specialItems } = filterItem(itemBag);
 
-      const allRole = [...combine, ...roles];
+      const specialItemsBuff = specialItems.filter(item => item.typeBuff !== null);
+
+      const allRole = [...combine, ...specialItemsBuff];
 
       const isStreak = checkStreak(user.dailyAttendance.lastLoginDate);
       let streak = 1;
@@ -139,6 +153,8 @@ const daily = {
           roleId: role.roleId,
           typeBuff: role.typeBuff,
           valueBuff: role.valueBuff,
+          name: role.name,
+          emoji: role.giftEmoji,
           bonus
         }
       });
@@ -219,6 +235,7 @@ const giveTicket = {
       }
       const user = await UserService.getUserById(discordId);
       const userReceived = await UserService.getUserById(target.id);
+      
       if (!user || !user.discordUserId) {
         await interaction.followUp({ embeds: [createNormalMessage(messages.unreadyRegisterBot)] });
         return;
@@ -239,7 +256,7 @@ const giveTicket = {
       const confirmButton = new ButtonBuilder()
       .setCustomId('confirmGiveTicket')
       .setLabel('Xác nhận chuyển')
-      .setStyle(ButtonStyle.Primary);
+      .setStyle(ButtonStyle.Success);
 
       const rejectButton = new ButtonBuilder()
       .setCustomId('rejectGiveTicket')
@@ -304,6 +321,11 @@ const giveTicket = {
             })],
             components: []
           });
+          const logChannel = interaction.guild?.channels.cache.get(process.env.LOG_CHANNEL || '');
+
+          if (logChannel?.type === ChannelType.GuildText) {
+            await logChannel.send(`[Transfer] <@${user.discordUserId}> chuyển <@${userReceived.discordUserId}> ${amount}${emoji.silverTicket} + tax: ${amountAfterTax - amount}${emoji.silverTicket}. <@${user.discordUserId}> còn ${userUpdated.tickets.silver}${emoji.silverTicket}. <@${userReceived.discordUserId}> tăng ${userReceivedUpdated.tickets.silver}${emoji.silverTicket}`);
+          }
         } catch (error) {
           console.log(error);
         }
@@ -315,10 +337,15 @@ const giveTicket = {
 }
 
 const filterItem = (items) => {
-  const gifts = items.filter(item => item.type === ShopItemEnum.GIFT);
-  const roles = items.filter(item => item.type === ShopItemEnum.ROLE);
-  const questItems = items.filter(item => item.type === ShopItemEnum.QUEST);
-  return { gifts, roles, questItems };
+  const gifts = items.filter(item => item.type === BagItemType.GIFT);
+  const roles = items.filter(item => item.type === BagItemType.ROLE);
+  const questItems = items.filter(item => item.type === BagItemType.RESET_QUEST);
+  const specialItems = items.filter(item => (
+    item.type === BagItemType.FRIEND_RING || 
+    item.type === BagItemType.RING_PIECE || 
+    item.type === BagItemType.WEEDING_RING
+  ));
+  return { gifts, roles, questItems, specialItems };
 }
 
 const bag = {
@@ -338,9 +365,9 @@ const bag = {
         await interaction.followUp({ embeds: [createNormalMessage(messages.unreadyRegisterBot)] });
         return;
       }
-      const { gifts, roles, questItems } = filterItem(user.itemBag);
+      const { gifts, roles, questItems, specialItems } = filterItem(user.itemBag);
       await interaction.followUp({
-        embeds: [createUserMessage(userActionType.bag, { gifts, roles, questItems, avatar, discordUserId: discordId, username: user.username })]
+        embeds: [createUserMessage(userActionType.bag, { gifts, roles, questItems, specialItems, avatar, discordUserId: discordId, username: user.username })]
       });
     } catch (error) {
       console.log(error, '[bag]');
@@ -365,9 +392,9 @@ const top = {
         return;
       }
       const friendsList = await FriendService.getAllFriends();
-      if (!friendsList.length) return;
       const silver = [];
       const golden = [];
+      const completeQuest = [];
       const users = await UserService.getAllUser();
       users.forEach(user => {
         silver.push({
@@ -380,10 +407,16 @@ const top = {
           quantity: user.tickets.gold,
           type: RewardEnum.GOLD_TICKET
         });
+        completeQuest.push({
+          discordUserId: user.discordUserId,
+          quantity: user.totalQuestCompleted,
+          type: 'completedQuest'
+        })
       });
       
       const topSilver = silver.sort((a, b) => b.quantity - a.quantity);
       const topGolden = golden.sort((a, b) => b.quantity - a.quantity);
+      const topCompleteQuest = completeQuest.sort((a, b) => b.quantity - a.quantity);
       const topFriends = friendsList.sort((a, b) => b.intimacyPoints - a.intimacyPoints);
       const select = new StringSelectMenuBuilder()
         .setCustomId('ranking')
@@ -407,6 +440,12 @@ const top = {
             .setDescription('Top 20 cặp đôi nhiều điểm thân thiết')
             .setValue('point')
         )
+        .addOptions(
+          new StringSelectMenuOptionBuilder()
+            .setLabel('Bảng xếp hạng hoàn thành nhiệm vụ')
+            .setDescription('Top 20 người chăm chỉ')
+            .setValue('completeQuest')
+        );
       
       const row = new ActionRowBuilder().addComponents(select);
       
@@ -435,10 +474,14 @@ const top = {
             selectedOption = 'goldTicket';
             rankList = topGolden;
             rankingType = 'vé vàng';
+          } else if (value === 'completeQuest') {
+            selectedOption = 'completeQuest';
+            rankList = topCompleteQuest;
+            rankingType = 'hoàn thành nhiệm vụ';
           } else {
             selectedOption = 'point';
-            rankList = friendsList;
-            rankingType = 'điểm thân thiết'
+            rankList = topFriends;
+            rankingType = 'điểm thân thiết';
             isCouple = true;
           }
 
@@ -466,6 +509,13 @@ const top = {
                 .setValue('point')
                 .setDefault(selectedOption === 'point')
             )
+            .addOptions(
+              new StringSelectMenuOptionBuilder()
+                .setLabel('Bảng xếp hạng hoàn thành nhiệm vụ')
+                .setDescription('Top 20 người chăm chỉ')
+                .setValue('completeQuest')
+                .setDefault(selectedOption === 'completeQuest')
+            );
 
           const rowNew = new ActionRowBuilder().addComponents(selectNew);
           await reply.edit({

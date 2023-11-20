@@ -1,4 +1,6 @@
-const friendModel = require("../models/friend.model");
+const { friendModel } = require("../models/friend.model");
+const { relationshipModel } = require("../models/relationship.model");
+const { specialItemModel, specialItemType } = require("../models/specialItem.model");
 
 class FriendService {
 
@@ -43,10 +45,127 @@ class FriendService {
     }
   }
 
+  static async getRelationShip(userOne, userTwo) {
+    try {
+      const conditions = {
+        $or: [
+          { $and: [{ discordIdFirst: userOne }, { discordIdLast: userTwo }] },
+          { $and: [{ discordIdFirst: userTwo }, { discordIdLast: userOne }] }
+        ]
+      };
+      const relationShip = await friendModel.findOne(conditions);
+      return relationShip;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  static async updateFriendRelationship(userOne, userTwo, data) {
+    try {
+      const conditions = {
+        $or: [
+          { $and: [{ discordIdFirst: userOne }, { discordIdLast: userTwo }] },
+          { $and: [{ discordIdFirst: userTwo }, { discordIdLast: userOne }] }
+        ]
+      };
+      const userUpdated = await friendModel.updateMany(conditions, { $set: { relationship: data } });
+      return userUpdated;
+    } catch (error) {
+      console.log(error.message);
+      return null;
+    }
+  }
+
+  static async updateFriendRelationshipDateAndOrder(userOne, userTwo, marriedDate, order) {
+    try {
+      const conditions = {
+        $or: [
+          { $and: [{ discordIdFirst: userOne }, { discordIdLast: userTwo }] },
+          { $and: [{ discordIdFirst: userTwo }, { discordIdLast: userOne }] }
+        ]
+      };
+      const userUpdated = await friendModel.updateMany(conditions, { $set: { marriedDate, order, isMarried: true } });
+      return userUpdated;
+    } catch (error) {
+      console.log(error.message);
+      return null;
+    }
+  }
+
+  static async getOrderRelationship() {
+    try {
+      const relationship = await friendModel.find({ isMarried: true });
+      return relationship;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  static async updateIntimacyPoints(userOne, userTwo, intimacyPoints) {
+    try {
+      const conditions = {
+        $or: [
+          { $and: [{ discordIdFirst: userOne }, { discordIdLast: userTwo }] },
+          { $and: [{ discordIdFirst: userTwo }, { discordIdLast: userOne }] }
+        ]
+      };
+      const item = await friendModel.updateMany(conditions, { $set: { intimacyPoints } });
+      return item;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   static async getAllFriends() {
     try {
       const friends = await friendModel.find();
       return friends;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  static async getAllRelationship() {
+    try {
+      const relationships = await relationshipModel.find();
+      return relationships;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  static async getRelationshipByLevel(level) {
+    try {
+      const condition = { level }
+      const relationship = await relationshipModel.findOne(condition);
+      return relationship;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  static async getAllRelationshipById(id) {
+    try {
+      const conditions = {
+        $or: [
+          { $and: [{ discordIdFirst: id }] },
+          { $and: [{ discordIdLast: id }] }
+        ]
+      };
+      const relationShip = await friendModel.find(conditions);
+      return relationShip;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  static async getWeedingRing() {
+    try {
+      const condition = {
+        type: specialItemType.WEEDING_RING
+      }
+      const weedingRing = await specialItemModel.findOne(condition);
+      return weedingRing;
     } catch (error) {
       console.log(error);
     }

@@ -7,54 +7,16 @@ const { createUserMessage } = require("../messages/userMessage");
 const { TaskTypeEnum, ActionEnum, RewardEnum } = require("../models/quest.model");
 const { QuestService } = require("../services/quest.service");
 const { UserService } = require("../services/user.service");
-const { checkingLastAttended, getTimeToEndOfDay, isSameWeek, getTimeToEndOfWeek, randomBetweenTwoNumber, handleEmoji, getCurrentTime } = require("../utils");
+const { checkingLastAttended, getTimeToEndOfDay, isSameWeek, getTimeToEndOfWeek, randomBetweenTwoNumber, handleEmoji, getCurrentTime, randomGiftReward } = require("../utils");
 const { ComponentType, ButtonStyle, TextInputStyle } = require("discord.js");
 const { LevelService } = require("../services/level.service");
 const { ShopService } = require("../services/shop.service");
-const { ShopItemEnum } = require("../models/shopItem.model");
 const { createQuestMessage } = require("../messages/questMessage");
+const { BagItemType } = require("../models/user.model");
+const { specialItemType } = require("../models/specialItem.model");
+const { GiftService } = require("../services/gift.service");
 connectDB();
 process.env.TZ = 'Asia/Bangkok';
-
-const combineReward = (gifts) => {
-  const hashMap = {}
-  const newGift = []
-  gifts.forEach((item) => {
-    if (hashMap[item.giftId] === undefined) {
-        hashMap[item.giftId] = 1;
-        newGift.push(item);
-    } else {
-        hashMap[item.giftId] += 1;
-        const findIndex = newGift.findIndex(data => data.giftId === item.giftId);
-        newGift[findIndex].quantity += 1; 
-    }
-  })
-  return newGift;
-}
-
-const randomGiftReward = (gifts, quantity) => {
-  const list = [];
-  for (let i = 0; i < quantity; i++) {
-    const random = Math.random() * 100;
-    let accumulatedDropRate = 0;
-    for (const item of gifts) {
-      accumulatedDropRate += item.dropRate;
-      if (random <= accumulatedDropRate) {
-        list.push({
-          giftId: item.id,
-          name: item.name,
-          description: item.description,
-          rewardType: item.type,
-          intimacyPoints: item.intimacyPoints,
-          giftEmoji: item.giftEmoji,
-          quantity: 1
-        })
-        break;
-      }
-    }
-  }
-  return combineReward(list);
-}
 
 const randomReward = (rewards, gifts, resetTicket) => {
   const data = []
@@ -72,20 +34,19 @@ const randomReward = (rewards, gifts, resetTicket) => {
   });
   if (resetTicket) {
     data.push({
-      giftId: resetTicket.id,
-      name: resetTicket.name,
-      description: resetTicket.description,
+      _id: resetTicket.questItem._id,
+      name: resetTicket.questItem.name,
+      description: resetTicket.questItem.description,
       rewardType: RewardEnum.QUEST_RESET,
-      giftEmoji: resetTicket.giftEmoji,
-      quantity: 1,
-      valueBuff: resetTicket.valueBuff
+      giftEmoji: resetTicket.questItem.emoji,
+      quantity: 1
     })
   }
   return data;
 }
 
 const checkExistResetQuest = (itemBag) => {
-  const isHaveResetTicket = itemBag.findIndex(item => item.type === ShopItemEnum.QUEST && item.valueBuff === RewardEnum.QUEST_RESET);
+  const isHaveResetTicket = itemBag.findIndex(item => item.type === BagItemType.RESET_QUEST);
   return isHaveResetTicket;
 }
 
@@ -198,17 +159,19 @@ const upgradeQuestExecute = async (reply, backQuestBoard, discordId) => {
     }
   
     const infoUpgradeLevel = await LevelService.getLevelByValue(level + 1);
-    const { priceUpgrade, value } = infoUpgradeLevel[0];
-    const { silver } = user.tickets;
+    const { priceUpgrade, value, priceGoldUpgrade } = infoUpgradeLevel[0];
+    const { silver, gold } = user.tickets;
   
-    if (silver < priceUpgrade) {
+    if (silver < priceUpgrade || gold < priceGoldUpgrade) {
       await reply.edit({
-        embeds: [createNormalMessage(messages.upgradeLevelFail(value, priceUpgrade))],
+        embeds: [createNormalMessage(messages.upgradeLevelFail(value, priceUpgrade, priceGoldUpgrade))],
         components: [row]
       });
       return;
     }
+
     user.tickets.silver = user.tickets.silver - priceUpgrade;
+    user.tickets.gold = user.tickets.gold - priceGoldUpgrade;
     user.level = infoUpgradeLevel[0];
     const updateLeverUser = await UserService.updateUser(user);
   
@@ -445,13 +408,13 @@ const rewardQuestWeekExecute = async (reply, backQuestBoard, discordId) => {
     user.totalQuestCompleted += countSuccessQuest;
     
     tempBag.forEach(bag => {
-      const itemExistOnBag = user.itemBag.findIndex(item => item.id === parseInt(bag.giftId));
+      const itemExistOnBag = user.itemBag.findIndex(item => item._id.equals(bag._id));
       if (itemExistOnBag === -1) {
         const itemToAdd = {
-          id: bag.giftId,
+          _id: bag._id,
           name: bag.name,
           description: bag.description,
-          type: bag.rewardType === RewardEnum.QUEST_RESET ? ShopItemEnum.QUEST : bag.rewardType,
+          type: bag.rewardType === RewardEnum.QUEST_RESET ? BagItemType.RESET_QUEST : bag.rewardType,
           intimacyPoints: bag.intimacyPoints,
           giftEmoji: bag.giftEmoji,
           quantity: bag.quantity,
@@ -500,12 +463,21 @@ const initButtonAndSelect = () => {
   const upgradeQuestBtn = new ButtonBuilder()
   .setCustomId('upgradeQuest')
   .setLabel('Nâng cấp')
-  .setStyle(ButtonStyle.Success);
+  .setStyle(ButtonStyle.Primary)
+  .setEmoji({
+    name: 'level_up',
+    id: '1174300851020496926',
+    animated: true
+  });
 
   const guideQuestBtn = new ButtonBuilder()
   .setCustomId('guideQuest')
   .setLabel('Hướng dẫn')
-  .setStyle(ButtonStyle.Success);
+  .setStyle(ButtonStyle.Primary).setEmoji({
+    name: 'guide',
+    id: '1174302703430676511',
+    animated: true
+  });
 
   const rowSelect = new ActionRowBuilder()
   .addComponents(select);
@@ -513,17 +485,29 @@ const initButtonAndSelect = () => {
   const rewardQuestDaily = new ButtonBuilder()
   .setCustomId('rewardQuestDaily')
   .setLabel('Nhận thưởng ngày')
-  .setStyle(ButtonStyle.Success);
+  .setStyle(ButtonStyle.Primary).setEmoji({
+    name: 'gift_box',
+    id: '1174301397886439484',
+    animated: true
+  });
 
   const rewardQuestWeek = new ButtonBuilder()
   .setCustomId('rewardQuestWeek')
   .setLabel('Nhận thưởng tuần')
-  .setStyle(ButtonStyle.Success);
+  .setStyle(ButtonStyle.Primary).setEmoji({
+    name: 'gift_box',
+    id: '1174301397886439484',
+    animated: true
+  });
 
   const backQuestBoard = new ButtonBuilder()
   .setCustomId('backQuestBoard')
   .setLabel('Quay lại bảng nhiệm vụ')
-  .setStyle(ButtonStyle.Success);
+  .setStyle(ButtonStyle.Primary).setEmoji({
+    name: 'back_to_board',
+    id: '1174295696522874890',
+    animated: true
+  });
 
   const rowBtnUpgradeGuideRewardDaily = new ActionRowBuilder()
   .addComponents([upgradeQuestBtn, guideQuestBtn, rewardQuestDaily]); 
@@ -543,7 +527,12 @@ const initResetAndSubmit = (type) => {
   const resetQuest = new ButtonBuilder()
   .setCustomId('resetQuest')
   .setLabel('Làm mới nhiệm vụ')
-  .setStyle(ButtonStyle.Success);
+  .setStyle(ButtonStyle.Primary)
+  .setEmoji({
+    name: 'reset',
+    id: '1174302627765432402',
+    animated: true
+  });
  
   // const submitItem = new ButtonBuilder()
   // .setCustomId('submitItem')
@@ -577,78 +566,6 @@ const rewardChecking = (quests) => {
     }
   }
   return isReceivedReward;
-}
-
-const submitItemQuest = async (interaction, reply, backQuestBoard, discordId) => {
-  try {
-    const rowBack = new ActionRowBuilder()
-      .addComponents(backQuestBoard); 
-  
-    const user = await UserService.getUserById(discordId);
-    const quests = user.quests.dailyQuestsReceived.quests;
-    const submitItems = quests.filter(item => item.action === ActionEnum.SUBMIT_ITEM && item.progress < item.completionCriteria);
-    const bag = user.itemBag;
-    const questItems = bag.filter(item => item.type === ShopItemEnum.QUEST);
-  
-    const select = new StringSelectMenuBuilder().setCustomId('itemChoose').setPlaceholder('Chọn vật phẩm nhiệm vụ')
-    
-    for (const item of questItems) {
-      select.addOptions(
-        new StringSelectMenuOptionBuilder()
-          .setLabel(item.name)
-          .setDescription(item.description)
-          .setValue(item.id + '')
-          .setEmoji(handleEmoji(item.giftEmoji))
-      );
-    }
-  
-    const row = new ActionRowBuilder().addComponents(select);
-  
-    await reply.edit({
-      embeds: [createQuestMessage(questActionType.submitItem, { quests: submitItems, bag: questItems})],
-      components: [row, rowBack]
-    });
-  
-    const collection = reply.createMessageComponentCollector({
-      componentType: ComponentType.StringSelect,
-      filter: (i) => i.user.id === interaction.user.id && i.customId === 'itemChoose',
-      time: 300000
-    });
-  
-    collection.on('collect', async interaction => {
-      try {
-        await interaction.deferUpdate();
-        const [value] = interaction.values;
-        const giftIndex = user.itemBag.findIndex(item => item.id === parseInt(value))
-        const emoji = user.itemBag[giftIndex].giftEmoji;
-        const questIndex = user.quests.dailyQuestsReceived.quests.findIndex(item => item.action === ActionEnum.SUBMIT_ITEM && item.placeChannel === emoji && item.progress < item.completionCriteria);
-        const quest = user.quests.dailyQuestsReceived.quests[questIndex];
-        if (!quest || quest.progress === quest.completionCriteria) {
-          await reply.edit({
-            embeds: [createNormalMessage(messages.itemSubmitted)],
-            components: [rowBack]
-          })
-          return;
-        }
-        user.quests.dailyQuestsReceived.quests[questIndex].progress += 1;
-        if (user.itemBag[giftIndex].quantity === 1) {
-          const newBag = user.itemBag.filter((item, index) => index !== giftIndex);
-          user.itemBag = newBag;
-        } else {
-          user.itemBag[giftIndex].quantity -= 1;
-        }
-        await UserService.updateUser(user);
-        await reply.edit({
-          embeds: [createNormalMessage(messages.itemSubmitSuccess(user.quests.dailyQuestsReceived.quests[questIndex].progress, quest.completionCriteria))],
-          components: [rowBack]
-        })
-      } catch (error) {
-        console.log(error);      
-      }
-    });
-  } catch (error) {
-    console.log(error);
-  }
 }
 
 const reply = async (interaction, user, avatar, discordId) => {
@@ -854,7 +771,7 @@ const reply = async (interaction, user, avatar, discordId) => {
         }
   
         if (type === 'submitItem') {
-          submitItemQuest(interaction, reply, backQuestBoard, discordId);
+          // submitItemQuest(interaction, reply, backQuestBoard, discordId);
           return;
         }
   
@@ -899,11 +816,10 @@ const quest = {
 
       const isNotReceiveWeekQuest = !isSameWeek(user.quests.weekQuestsReceived.timeReceivedQuest, new Date()) || !user.quests.weekQuestsReceived.quests.length; 
       if (isNotReceiveWeekQuest) {
-        const giftQuest = await QuestService.getGiftQuest();
-        if (!giftQuest.length) return;
-        const gifts = giftQuest.filter(item => item.type === ShopItemEnum.GIFT);
-        const itemQuest = await ShopService.getAllShop();
-        const resetTicket = itemQuest.find(item => item.type === ShopItemEnum.QUEST && item.valueBuff === RewardEnum.QUEST_RESET);
+        const gifts = await QuestService.getGiftQuest();
+        if (!gifts.length) return;
+        const itemQuest = await ShopService.getQuestShop();
+        const resetTicket = itemQuest.find(item => item.questItem.type === specialItemType.RESET_QUEST);
         const weekQuests = filterQuest(quests, TaskTypeEnum.WEEK, gifts, resetTicket);
         const getWeekQuestWithLevel = getRandomQuest(weekQuests);
         user.quests.weekQuestsReceived.timeReceivedQuest = new Date();
@@ -935,7 +851,7 @@ const quest = {
 }
 
 const giftQuest = {
-  name: 'admin-add-gift-quest',
+  name: 'admin-edit-gift-drop-rate',
   execute: async (interaction) => {
     try {
       if (!interaction) return;
@@ -947,24 +863,22 @@ const giftQuest = {
           });
           return;
       }
-      const itemShop = await ShopService.getAllShop();
-      const giftsShop = itemShop.filter(item => item.type === ShopItemEnum.GIFT);
-      const giftsQuest = await QuestService.getGiftQuest();
+      const gifts = await GiftService.getAllGift();
 
-      const select = new StringSelectMenuBuilder().setCustomId('giftChooseEdit').setPlaceholder('Chọn quà thêm hoặc sửa rate')
-      for (const item of giftsShop) {
+      const select = new StringSelectMenuBuilder().setCustomId('giftChooseEdit').setPlaceholder('Chọn quà muốn sửa rate')
+      for (const item of gifts) {
         select.addOptions(
           new StringSelectMenuOptionBuilder()
             .setLabel(item.name)
             .setDescription(item.description)
-            .setValue(item.id + '')
+            .setValue(String(item._id))
             .setEmoji(handleEmoji(item.giftEmoji))
         );
       }
       const row = new ActionRowBuilder().addComponents(select);
 
       const reply = await interaction.followUp({
-        embeds: [createQuestMessage(questActionType.giftQuest, { gifts: giftsQuest})],
+        embeds: [createQuestMessage(questActionType.giftQuest, { gifts })],
         components: [row]
       })
       
@@ -979,11 +893,11 @@ const giftQuest = {
       selectCollect.on('collect', async interaction => {
         try {
           const [value] = interaction.values;
-          const gift = giftsShop.find(item => item.id === parseInt(value));
+          const gift = gifts.find(item => item._id.equals(value));
           giftChosen = gift;
           const modal = new ModalBuilder()
           .setCustomId('editGiftRate')
-          .setTitle(`Chỉnh sửa rate hoặc thêm ${gift.name}`);
+          .setTitle(`Chỉnh sửa rate ${gift.name}`);
   
           const input = new TextInputBuilder()
           .setCustomId(`rate`)
@@ -1007,30 +921,11 @@ const giftQuest = {
           if (submitted) {
             await submitted.deferUpdate();
             const dropRate = submitted.fields.getTextInputValue('rate');
-            const giftsQuestNew = await QuestService.getGiftQuest();
-            const findIndex = giftsQuestNew.findIndex(item => item.id === giftChosen.id);
-            if (findIndex === -1) {
-              const questToAdd = {
-                id: giftChosen.id,
-                name: giftChosen.name,
-                type: giftChosen.type,
-                description: giftChosen.description,
-                giftEmoji: giftChosen.giftEmoji,
-                intimacyPoints: giftChosen.intimacyPoints,
-                dropRate
-              }
-              await QuestService.addGiftQuest(questToAdd);
-              const giftsQuestRender = await QuestService.getGiftQuest();
-              await reply.edit({
-                embeds: [createQuestMessage(questActionType.giftQuest, { gifts: giftsQuestRender})],
-              })
-              return;
-            }
-            const id = giftsQuestNew[findIndex].id;
-            await QuestService.updateGiftQuest(id, dropRate);
-            giftsQuestNew[findIndex].dropRate = dropRate;
+            const findIndex = gifts.findIndex(item => item._id.equals(giftChosen._id));
+            gifts[findIndex].dropRate = dropRate;
+            await GiftService.editDropRateGift(gifts[findIndex]._id, dropRate);
             await reply.edit({
-              embeds: [createQuestMessage(questActionType.giftQuest, { gifts: giftsQuestNew})],
+              embeds: [createQuestMessage(questActionType.giftQuest, { gifts })],
             })
           }
         } catch (error) {
@@ -1042,6 +937,5 @@ const giftQuest = {
     }
   }
 }
-
 
 module.exports = { quest, giftQuest };

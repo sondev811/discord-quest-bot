@@ -1,3 +1,6 @@
+const { createCanvas, loadImage } = require('canvas');
+const { RewardEnum } = require('../models/quest.model');
+
 process.env.TZ = 'Asia/Bangkok';
 
 const convertTimestamp = (timestamp) => {
@@ -13,6 +16,12 @@ const convertTimestamp = (timestamp) => {
   };
   const formattedDate = date.toLocaleString('en-US', options);
   return formattedDate;
+}
+
+const convertDateTime = (date) => {
+  if (!date) return null;
+  const calcDate = new Date(date);
+  return `${calcDate.getDate()}/${calcDate.getMonth() + 1}/${calcDate.getFullYear()} - ${calcDate.getHours()}:${calcDate.getMinutes() < 10 ? `0${calcDate.getMinutes()}` : calcDate.getMinutes()}`;
 }
 
 const checkingLastAttended = (lastLogin) => {
@@ -46,7 +55,6 @@ const checkStreak = (lastLogin) => {
 
 const getTimeToEndOfDay = () => {
   const nDate = new Date();
-  console.log(`${nDate.getHours()}/${nDate.getMinutes()}/${nDate.getSeconds()}`);
 
   const endOfDay = new Date(nDate);
 
@@ -79,16 +87,13 @@ function isSameWeek(date1, date2) {
 
 const getTimeToEndOfWeek = () => {
   const currentDate = new Date();
+  const startDay = 1; 
+  const d = currentDate.getDay();
+  const weekStart = new Date(currentDate.valueOf() - (d <= 0 ? 7 - startDay : d - startDay) * 86400000); //rewind to start day
+  const weekEnd = new Date(weekStart.valueOf() + 7 * 86400000);
+  weekEnd.setHours(0, 0, 0, 0);
 
-  // Calculate the end of the current week (Sunday)
-  const endOfWeek = new Date(currentDate);
-  endOfWeek.setHours(0, 0, 0, 0);
-  endOfWeek.setDate(endOfWeek.getDate() + (8 - endOfWeek.getDay()));
-
-  // Calculate the time remaining in milliseconds until the end of the current week
-  const timeRemaining = endOfWeek - currentDate;
-
-  // Convert milliseconds to hours and minutes
+  const timeRemaining = weekEnd - currentDate;
   const hoursRemaining = Math.floor(timeRemaining / (1000 * 60 * 60));
   const minutesRemaining = Math.floor((timeRemaining / (1000 * 60)) % 60);
   const secondsRemaining = Math.floor((timeRemaining / 1000) % 60);
@@ -141,7 +146,7 @@ const findRoleBuff = (arr1, arr2) => {
   const roles = [];
 
   for (const element of arr1) {
-    const findIndex = arr2.findIndex(item => item.roleId === element.roleId);
+    const findIndex = arr2.findIndex(item => item.roleId === element.roleId && element.valueBuff !== '0');
     if (findIndex !== -1) {
       roles.push(element);
     }
@@ -151,6 +156,71 @@ const findRoleBuff = (arr1, arr2) => {
 
 const randomBetweenTwoNumber = (min, max) => {
   return Math.floor(Math.random() * (parseInt(max) - parseInt(min) + 1)) + parseInt(min);
+}
+
+const mergeImages = async(avatar1, avatar2) => {
+  let betweenImage = 'https://cdn.discordapp.com/emojis/1174313463368142929.png';
+  const image1 = await loadImage(avatar1);
+  const image2 = await loadImage(betweenImage);
+  const image3 = await loadImage(avatar2);
+
+  const canvasWidth = image1.width + image2.width + image3.width + 45;
+  const canvasHeight = Math.max(image1.height, image2.height, image3.height);
+
+  const canvas = createCanvas(canvasWidth, canvasHeight);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(image1, 0, 0);
+  ctx.drawImage(image2, image1.width + 15, 0);
+  ctx.drawImage(image3, image1.width + image2.width + 30, 0);
+  return canvas.toBuffer('image/png');
+}
+
+const getRandomGift = (gifts) => {
+  const totalWeight = gifts.reduce((acc, gift) => acc + gift.dropRate, 0);
+  let randomNumber = Math.random() * totalWeight;
+
+  for (let i = 0; i < gifts.length; i++) {
+    if (randomNumber < gifts[i].dropRate) {
+      return gifts[i];
+    } else {
+      randomNumber -= gifts[i].dropRate;
+    }
+  }
+
+  return null;
+}
+
+const combineReward = (gifts) => {
+  const hashMap = {}
+  const newGift = []
+  gifts.forEach((item) => {
+    if (hashMap[item._id] === undefined) {
+        hashMap[item._id] = 1;
+        newGift.push(item);
+    } else {
+        hashMap[item._id] += 1;
+        const findIndex = newGift.findIndex(data => data._id.equals(item._id));
+        newGift[findIndex].quantity += 1; 
+    }
+  })
+  return newGift;
+}
+
+const randomGiftReward = (gifts, quantity) => {
+  const list = [];
+  for (let i = 0; i < quantity; i++) {
+    const gift = getRandomGift(gifts);
+    list.push({
+      _id: gift._id,
+      name: gift.name,
+      description: gift.description,
+      rewardType: RewardEnum.GIFT,
+      intimacyPoints: gift.intimacyPoints,
+      giftEmoji: gift.giftEmoji,
+      quantity: 1
+    })
+  }
+  return combineReward(list);
 }
 
 module.exports = { 
@@ -165,5 +235,8 @@ module.exports = {
   calcDate,
   handleEmoji,
   findRoleBuff,
-  randomBetweenTwoNumber
+  randomBetweenTwoNumber,
+  mergeImages,
+  convertDateTime,
+  randomGiftReward
 };

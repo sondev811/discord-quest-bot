@@ -1,14 +1,16 @@
 const { ButtonBuilder, ActionRowBuilder, SelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require("@discordjs/builders");
-const { friendActionType } = require("../constants/general");
+const { friendActionType, friendshipName } = require("../constants/general");
 const messages = require("../constants/messages");
 const { createFriendMessage } = require("../messages/friendMessage");
 const { createNormalMessage } = require("../messages/normalMessage");
 const { UserService } = require("../services/user.service");
 const { ButtonStyle, ComponentType, Events } = require("discord.js");
 const { FriendService } = require("../services/friend.service");
-const { calcDate, convertTimestamp, handleEmoji } = require("../utils");
-const { ShopItemEnum } = require("../models/shopItem.model");
+const { calcDate, handleEmoji, mergeImages, convertDateTime } = require("../utils");
 const { ActionEnum } = require("../models/quest.model");
+const { BagItemType } = require("../models/user.model");
+const { relationshipType } = require("../models/relationship.model");
+process.env.TZ = 'Asia/Bangkok';
 
 const addFriend = {
   name: 'leuthemban',
@@ -95,9 +97,13 @@ const addFriend = {
             })
             return;
           }
+
+          const basicLevel = await FriendService.getRelationshipByLevel(1);
+
           const body = {
             discordIdFirst: user.discordUserId,
             discordIdLast: userReceived.discordUserId,
+            relationship: basicLevel
           }
           const createRelationResult = await FriendService.createRelationship(body);
   
@@ -211,7 +217,42 @@ const removeFriend = {
           user.friends = newUserList;
           const newUserReceivedList = userReceived.friends.filter(item => item.discordUserId !== user.discordUserId);
           userReceived.friends = newUserReceivedList;
+          
+          const checkWeedingRingUser = user.itemBag.findIndex(item => item.type === BagItemType.WEEDING_RING);
+          const checkWeedingRingFriend = userReceived.itemBag.findIndex(item => item.type === BagItemType.WEEDING_RING);
   
+          if (checkWeedingRingUser !== -1) {
+            const newBag = user.itemBag.filter(item => item.type !== BagItemType.WEEDING_RING);
+            user.itemBag = newBag;
+          }
+
+          if (checkWeedingRingFriend !== -1) {
+            const newBag = userReceived.itemBag.filter(item => item.type !== BagItemType.WEEDING_RING);
+            userReceived.itemBag = newBag;
+          }
+
+          const checkCertificateUser = user.itemBag.findIndex(item => item.type === BagItemType.CERTIFICATE);
+          const checkCertificateFriend = userReceived.itemBag.findIndex(item => item.type === BagItemType.CERTIFICATE);
+          
+          if (checkCertificateUser !== -1) {
+            const newBag = user.itemBag.filter(item => item.type !== BagItemType.CERTIFICATE);
+            user.itemBag = newBag;
+          }
+
+          if (checkCertificateFriend !== -1) {
+            const newBag = userReceived.itemBag.filter(item => item.type !== BagItemType.CERTIFICATE);
+            userReceived.itemBag = newBag;
+          }
+
+          const messageUser = await interaction.guild?.members.fetch(user.discordUserId);
+          const messageFriend = await interaction.guild?.members.fetch(userReceived.discordUserId);
+          const role = await interaction.guild?.roles.cache.get(process.env.WEDDING_ROLE);
+
+          if (role) {
+            await messageUser.roles.remove(role);
+            await messageFriend.roles.remove(role);
+          }
+
           await UserService.updateUser(user);
           await UserService.updateUser(userReceived);
   
@@ -236,6 +277,17 @@ const removeFriend = {
   }
 }
 
+const marriedCheck = (relationships) => {
+  let isMarried = false;
+  for(let item of relationships) {
+    if (item && item?.relationship?.name === relationshipType.married) {
+      isMarried = true;
+      break;
+    }
+  }
+  return isMarried
+}
+
 const relationship = {
   name: 'leurela',
   execute: async interaction => {
@@ -256,19 +308,36 @@ const relationship = {
         const purchase = new ButtonBuilder()
         .setCustomId('purchaseFriendSlot')
         .setLabel('Mua thêm slot bạn bè')
-        .setStyle(ButtonStyle.Success);
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji({
+          name: 'checked',
+          id: '1174312599085650000',
+          animated: true
+        });
 
         const guide = new ButtonBuilder()
           .setCustomId('guide')
           .setLabel('Hướng dẫn')
-          .setStyle(ButtonStyle.Success);
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji({
+            name: 'guide',
+            id: '1174302703430676511',
+            animated: true
+          });
 
         const row = new ActionRowBuilder().addComponents([purchase, guide]);
+
+        const friendList = [];
+
+        for(let friend of user.friends) {
+          const relationship = await FriendService.getRelationShip(user.discordUserId, friend.discordUserId);
+          friendList.push(relationship);
+        }
         
         const reply = await interaction.followUp({
           embeds: [createFriendMessage(friendActionType.getAllRelationship, 
             { 
-              friends: user.friends,
+              friends: friendList,
               username: user.username,
               gifts: user.giftsGiven,
               discordUserId: user.discordUserId,
@@ -337,18 +406,425 @@ const relationship = {
         return;
       }
 
-      await interaction.followUp({ embeds: [createFriendMessage(friendActionType.getRelationship,
-        {
-          username: user.username,
-          targetUsername: userReceived.username,
-          targetId: userReceived.discordUserId,
-          intimacyPoints: user.friends[isFriend].intimacyPoints,
-          discordUserId: user.discordUserId,
-          avatar: interaction.user.avatar,
-          dateConverted: calcDate(user.friends[isFriend].friendDate),
-          date: convertTimestamp(user.friends[isFriend].friendDate)
-        }  
-      )] });
+      const friendshipData = await FriendService.getRelationShip(user.discordUserId, userReceived.discordUserId);
+
+      const upgradeRelationship = new ButtonBuilder()
+      .setCustomId('upgradeRelationship')
+      .setLabel('Tăng cấp độ thân thiết')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji({
+        name: 'level_up',
+        id: '1174300851020496926',
+        animated: true
+      });
+
+      const marryBtn = new ButtonBuilder()
+      .setCustomId('marry')
+      .setLabel('Kết hôn')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji({
+        name: 'marry',
+        id: '1174313463368142929'
+      });
+
+      const guideMarried = new ButtonBuilder()
+        .setCustomId('guideMarried')
+        .setLabel('Hướng dẫn')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji({
+          name: 'guide',
+          id: '1174302703430676511',
+          animated: true
+        });
+
+      const craft = new ButtonBuilder()
+        .setCustomId('craft')
+        .setLabel('Ghép nhẫn kết hôn')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji({
+          name: 'craft_ring',
+          id: '1175499482994061322'
+        });
+
+      const backBtn = new ButtonBuilder()
+      .setCustomId('backRelationship')
+      .setLabel('Quay lại')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji({
+        name: 'back_to_board',
+        id: '1174295696522874890',
+        animated: true
+      });
+
+      const acceptMarry = new ButtonBuilder()
+      .setCustomId('acceptMarry')
+      .setLabel('Đồng ý')
+      .setStyle(ButtonStyle.Success); 
+
+      const rejectMarry = new ButtonBuilder()
+      .setCustomId('rejectMarry')
+      .setLabel('Từ chối')
+      .setStyle(ButtonStyle.Danger); 
+
+      const rowRequestMarry = new ActionRowBuilder().addComponents([acceptMarry, rejectMarry]);
+
+      const messageUser = await interaction.guild?.members.fetch(user.discordUserId);
+      const messageFriend = await interaction.guild?.members.fetch(userReceived.discordUserId);
+    
+      const components = [];
+
+      const userRelationships = await FriendService.getAllRelationshipById(user.discordUserId);
+      const friendRelationships = await FriendService.getAllRelationshipById(userReceived.discordUserId);
+
+      const userMarriedCheck = marriedCheck(userRelationships);
+      const friendMarriedCheck = marriedCheck(friendRelationships);
+
+      if (friendshipData.relationship.name === relationshipType.friend || friendshipData.relationship.name === relationshipType.bestFriend) {
+        components.push(upgradeRelationship);
+      }
+
+      if (friendshipData.relationship.name === relationshipType.soulmate && !userMarriedCheck && !friendMarriedCheck) {
+        components.push(marryBtn);
+      }
+
+      if (!userMarriedCheck && !friendMarriedCheck) {
+        components.push(craft);
+      }
+
+      components.push(guideMarried);
+
+      const rowBack = new ActionRowBuilder().addComponents(backBtn);
+
+      const row = new ActionRowBuilder().addComponents(components);
+
+      const body = {
+        username: user.username,
+        targetUsername: userReceived.username,
+        targetId: userReceived.discordUserId,
+        intimacyPoints: user.friends[isFriend].intimacyPoints,
+        discordUserId: user.discordUserId,
+        avatar: interaction.user.avatar,
+        dateConverted: calcDate(user.friends[isFriend].friendDate),
+        date: convertDateTime(user.friends[isFriend].friendDate),
+        friendship: friendshipData.relationship.name,
+        isMarried: friendshipData.isMarried,
+        marriedDate: convertDateTime(friendshipData.marriedDate),
+        order: friendshipData.order === 1 ? `**đầu tiên**` : `thứ **${friendshipData.order}**`
+      };
+
+      const beforeEmbed = createFriendMessage(friendActionType.getRelationship, body);
+      const reply = await interaction.followUp(
+        { 
+          embeds: [beforeEmbed],
+          components: [row]
+        }
+      );
+
+      const relationshipCollection = reply.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: (i) => i.user.id === interaction.user.id && (
+          i.customId === 'upgradeRelationship' || 
+          i.customId === 'guideMarried' || 
+          i.customId === 'craft' || 
+          i.customId === 'backRelationship' || 
+          i.customId === 'marry' ||
+          i.customId === 'acceptMarry' ||
+          i.customId === 'rejectMarry'
+        ),
+        time: 300000
+      })
+
+      relationshipCollection.on('collect', async interaction => {
+        try {
+          await interaction.deferUpdate();
+          const customId = interaction.customId;
+          if (customId === 'upgradeRelationship') {
+            const newFriendshipData = await FriendService.getRelationShip(user.discordUserId, userReceived.discordUserId);
+            const nextLevel = await FriendService.getRelationshipByLevel(newFriendshipData.relationship.level + 1);
+            if (!nextLevel || nextLevel.level !== newFriendshipData.relationship.level + 1) return;
+
+            if (newFriendshipData.intimacyPoints < nextLevel.intimacyPointUpgrade) {
+              await reply.edit({
+                embeds: [createNormalMessage(messages.upgradeLevelFriendFail(friendshipName[nextLevel.name], nextLevel.intimacyPointUpgrade))],
+                components: [rowBack]
+              });
+              return;
+            }
+            await FriendService.updateFriendRelationship(user.discordUserId, userReceived.discordUserId, nextLevel);
+            await reply.edit({
+              embeds: [createNormalMessage(messages.upgradeLevelFriendSuccess(friendshipName[nextLevel.name]))],
+              components: [rowBack]
+            });
+            return;
+          }
+          if (customId === 'marry') {
+            const newUserData = await UserService.getUserById(discordId);
+            const checkWeedingRing = newUserData.itemBag.findIndex(item => item.type === BagItemType.WEEDING_RING);
+            const checkCertificate = newUserData.itemBag.findIndex(item => item.type === BagItemType.CERTIFICATE);
+            
+            if (checkWeedingRing === -1 || checkCertificate === -1) {
+              await reply.edit({
+                embeds: [createNormalMessage(messages.marryFail)],
+                components: [rowBack]
+              });
+              return;
+            }
+            await reply.edit({
+              embeds: [createNormalMessage(messages.sendRequestMarry(user.discordUserId, userReceived.discordUserId))],
+              components: [rowRequestMarry]
+            });
+
+            const requestCollection = reply.createMessageComponentCollector({
+              componentType: ComponentType.Button,
+              filter: (i) => i.user.id === userReceived.discordUserId && (
+                i.customId === 'acceptMarry' ||
+                i.customId === 'rejectMarry'
+              ),
+              time: 300000
+            });
+
+            requestCollection.on('collect', async interaction => {
+              try {
+                await interaction.deferUpdate();
+                const customId = interaction.customId;
+                if (customId === 'acceptMarry') {
+                  const newUserData = await UserService.getUserById(discordId);
+                  const newUserFriend = await UserService.getUserById(userReceived.discordUserId);
+                  
+                  const weedingRing = newUserData.itemBag.find(item => item.type === BagItemType.WEEDING_RING);
+                 
+                  const ringAddToBag = {
+                    _id: weedingRing._id,
+                    name: weedingRing.name,
+                    description: weedingRing.description,
+                    type: weedingRing.type,
+                    typeBuff: weedingRing.typeBuff,
+                    giftEmoji: weedingRing.giftEmoji,
+                    valueBuff: weedingRing.valueBuff,
+                    quantity: 1
+                  }
+
+                  newUserFriend.itemBag.push(ringAddToBag);
+
+                  const newFriendshipWedding = await FriendService.getRelationShip(user.discordUserId, userReceived.discordUserId);
+                  
+                  const nextLevel = await FriendService.getRelationshipByLevel(newFriendshipWedding.relationship.level + 1);
+                  await FriendService.updateFriendRelationship(newUserData.discordUserId, newUserFriend.discordUserId, nextLevel);
+                 
+                  const role = await interaction.guild?.roles.cache.get(process.env.WEDDING_ROLE);
+                  if (role) {
+                    await messageUser.roles.add(role);
+                    await messageFriend.roles.add(role);
+                  }
+
+                  await UserService.updateUser(newUserData);
+                  await UserService.updateUser(newUserFriend);
+
+                  const allRelationshipGotMarried = await FriendService.getOrderRelationship();
+
+                  let order = null;
+
+                  if (allRelationshipGotMarried.length === 0) {
+                    order = '**đầu tiên**';
+                  } else {
+                    order = `thứ **${allRelationshipGotMarried.length + 1}**`
+                  }
+                  const currentDate = new Date();
+                  const serverOwner = process.env.OWNER_ID;
+
+                  await FriendService.updateFriendRelationshipDateAndOrder(newUserData.discordUserId, newUserFriend.discordUserId, currentDate, allRelationshipGotMarried.length + 1);
+                  const marriedDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+                  
+                  if (messageUser.user.avatar && messageFriend.user.avatar) {
+                    const avatarUserOne = `https://cdn.discordapp.com/avatars/${messageUser.user.id}/${messageUser.user.avatar}.png`;
+                    const avatarUserTwo = `https://cdn.discordapp.com/avatars/${messageFriend.user.id}/${messageFriend.user.avatar}.png`;
+                    const imageCombine = await mergeImages(avatarUserOne, avatarUserTwo);
+                    await reply.edit({
+                      embeds: [createFriendMessage(friendActionType.marrySuccess, 
+                        { 
+                          user: newUserData.discordUserId, 
+                          friend: newUserFriend.discordUserId, 
+                          role,
+                          order,
+                          serverOwner,
+                          marriedDate
+                        }
+                      )],
+                      components: [],
+                      files: [{
+                        attachment: imageCombine,
+                        name: `${newUserData.discordUserId}${newUserFriend.discordUserId}.png`,
+                      }],
+                    });
+                    return;
+                  }
+
+                  await reply.edit({
+                    embeds: [createFriendMessage(friendActionType.marrySuccess, 
+                      { 
+                        user: newUserData.discordUserId, 
+                        friend: newUserFriend.discordUserId, 
+                        role,
+                        order,
+                        serverOwner,
+                        marriedDate
+                      }
+                    )],
+                    components: [],
+                  });
+      
+                  return;
+                }
+      
+                if (customId === 'rejectMarry') {
+                  await reply.edit({
+                    embeds: [createNormalMessage(messages.sendRejectMarry(user.discordUserId, userReceived.discordUserId))],
+                    components: []
+                  });
+                  return;
+                }
+              } catch (error) {
+                console.log(error);
+              }
+            })
+            return;
+          }
+          if (customId === 'craft') {
+            const newUserData = await UserService.getUserById(discordId);
+
+            const bag = newUserData.itemBag;
+
+            const checkMarried = bag.findIndex(item => item.type === BagItemType.WEEDING_RING);
+            if (checkMarried !== -1) {
+              await reply.edit({
+                embeds: [createNormalMessage(messages.preventCraftWhenMarried)],
+                components: [rowBack]
+              });
+              return;
+            }
+            const itemCraft = bag.filter(item => item.type === BagItemType.RING_PIECE);
+            if (!itemCraft || itemCraft.length < 2) {
+              await reply.edit({
+                embeds: [createNormalMessage(messages.craftFail)],
+                components: [rowBack]
+              });
+              return;
+            }
+
+            const newFriendData = await UserService.getUserById(userReceived.discordUserId);
+            const newFriendshipData = await FriendService.getRelationShip(discordId, userReceived.discordUserId);
+
+            const userSilver = newUserData.tickets.silver;
+            const friendSilver = newFriendData.tickets.silver;
+
+            if (userSilver < 5000) {
+              await reply.edit({
+                embeds: [createNormalMessage(messages.insufficientBalanceCraft(discordId))],
+                components: [rowBack]
+              });
+              return;
+            }
+
+            if(friendSilver < 5000) {
+              await reply.edit({
+                embeds: [createNormalMessage(messages.insufficientBalanceCraft(userReceived.discordUserId))],
+                components: [rowBack]
+              });
+              return;
+            }
+
+            if (newFriendshipData.intimacyPoints < 50) {
+              await reply.edit({
+                embeds: [createNormalMessage(messages.insufficientBalanceCraft(insufficientPointCraft))],
+                components: [rowBack]
+              });
+            }
+
+            const findFriendIndexUser = newUserData.friends.findIndex(item => item.discordUserId === newFriendData.discordUserId);
+            newUserData.friends[findFriendIndexUser].intimacyPoints -= 300;
+            newUserData.tickets.silver -= 5000;
+      
+            const findFriendIndex = newFriendData.friends.findIndex(item => item.discordUserId === newUserData.discordUserId);
+            newFriendData.friends[findFriendIndex].intimacyPoints -= 300;
+            newFriendData.tickets.silver -= 5000;
+
+            const filterBag = bag.filter(item => item.type !== BagItemType.RING_PIECE);
+            const weedingRing = await FriendService.getWeedingRing();
+
+            const ringAddToBag = {
+              _id: weedingRing._id,
+              name: weedingRing.name,
+              description: weedingRing.description,
+              type: weedingRing.type,
+              typeBuff: weedingRing.buffInfo.typeBuff,
+              giftEmoji: weedingRing.emoji,
+              valueBuff: weedingRing.buffInfo.valueBuff,
+              quantity: 1
+            }
+
+            filterBag.push(ringAddToBag);
+
+            newUserData.itemBag = filterBag;
+
+            await UserService.updateUser(newUserData);
+            await UserService.updateUser(newFriendData);
+            await FriendService.updateIntimacyPoints(newUserData.discordUserId, newFriendData.discordUserId, newUserData.friends[findFriendIndexUser].intimacyPoints);
+
+            await reply.edit({
+              embeds: [createNormalMessage(messages.craftSuccess(weedingRing))],
+              components: [rowBack]
+            });
+            return;
+          }
+
+          if (customId === 'backRelationship') {
+            const friendshipDataNew = await FriendService.getRelationShip(user.discordUserId, userReceived.discordUserId);
+            body.friendship = friendshipDataNew.relationship.name;
+
+            const components = [];
+
+            const newUserRelationships = await FriendService.getAllRelationshipById(user.discordUserId);
+            const newFriendRelationships = await FriendService.getAllRelationshipById(userReceived.discordUserId);
+      
+            const newUserMarriedCheck = marriedCheck(newUserRelationships);
+            const newFriendMarriedCheck = marriedCheck(newFriendRelationships);
+      
+            if (friendshipDataNew.relationship.name === relationshipType.friend || friendshipDataNew.relationship.name === relationshipType.bestFriend) {
+              components.push(upgradeRelationship);
+            }
+      
+            if (friendshipDataNew.relationship.name === relationshipType.soulmate && !newUserMarriedCheck && !newFriendMarriedCheck) {
+              components.push(marryBtn);
+            }
+      
+            if (!newUserMarriedCheck && !newFriendMarriedCheck) {
+              components.push(craft);
+            }
+      
+            components.push(guideMarried);
+      
+            const newRow = new ActionRowBuilder().addComponents(components);
+
+            await reply.edit({
+              embeds: [createFriendMessage(friendActionType.getRelationship, body)],
+              components: [newRow]
+            });
+            return;
+          }
+
+          if (customId === 'guideMarried') {
+            await reply.edit({
+              embeds: [createFriendMessage(friendActionType.guideCraft)],
+              components: [rowBack]
+            });
+          }
+
+        } catch (error) {
+          console.log(error);
+        }
+      });
+
+
       
     } catch (error) {
       console.log(error, '[leurela]');
@@ -391,7 +867,7 @@ const gift = {
         return;
       }
 
-      const gifts = user.itemBag.filter(item => item.type === ShopItemEnum.GIFT);
+      const gifts = user.itemBag.filter(item => item.type === BagItemType.GIFT);
       if(!gifts.length) {
         await interaction.followUp({
           embeds: [createFriendMessage(friendActionType.gift, { gifts, targetUsername: userReceived.username})]
@@ -405,15 +881,17 @@ const gift = {
           new StringSelectMenuOptionBuilder()
             .setLabel(item.name)
             .setDescription(item.description)
-            .setValue(item.id + '')
+            .setValue(String(item._id))
             .setEmoji(handleEmoji(item.giftEmoji))
         );
       }
 
       const row = new ActionRowBuilder().addComponents(select);
 
+      const embeds = createFriendMessage(friendActionType.gift, { gifts, targetUsername: userReceived.username})
+
       const reply = await interaction.followUp({
-        embeds: [createFriendMessage(friendActionType.gift, { gifts, targetUsername: userReceived.username})],
+        embeds: [embeds],
         components: [row]
       })
 
@@ -427,10 +905,10 @@ const gift = {
         try {
           await interaction.deferUpdate();
           const [value] = interaction.values;
-          const giftIndex = user.itemBag.findIndex(item => item.id === parseInt(value));
-          const gift = gifts.find(item => item.id === parseInt(value));
+          const giftIndex = user.itemBag.findIndex(item => item._id.equals(value));
+          const gift = gifts.find(item => item._id.equals(value));
           if (gift.quantity === 1) {
-            const newItemBag = user.itemBag.filter(item => item.id !== parseInt(value));
+            const newItemBag = user.itemBag.filter(item => !item._id.equals(value));
             user.itemBag = newItemBag;
           } else {
             user.itemBag[giftIndex].quantity -= 1;
@@ -442,10 +920,10 @@ const gift = {
           const findFriendIndex = userReceived.friends.findIndex(item => item.discordUserId === user.discordUserId);
           userReceived.friends[findFriendIndex].intimacyPoints += gift.intimacyPoints;
   
-          const findItemOnGifted = user.giftsGiven.findIndex(item => item.id === gift.id);
+          const findItemOnGifted = user.giftsGiven.findIndex(item => item._id.equals(gift._id));
           if (findItemOnGifted === -1) {
             const addData = {
-              id: gift.id,
+              _id: gift._id,
               giftEmoji: gift.giftEmoji,
               name: gift.name,
               quantity: 1
@@ -471,7 +949,7 @@ const gift = {
   
           await UserService.updateUser(user);
           await UserService.updateUser(userReceived);
-  
+
           await FriendService.updateIntimacyPoints(user.discordUserId, userReceived.discordUserId, intimacyPointsUpdate)
           await interaction.channel.send(`<@${userReceived.discordUserId}>`);
           await reply.edit({

@@ -1,5 +1,5 @@
 const { errors } = require("../constants/general");
-const { giftQuestModel } = require("../models/giftQuest.model");
+const { giftModel } = require("../models/gift.model");
 const { questModel } = require("../models/quest.model");
 const customTimeout = 20000;
 
@@ -17,7 +17,7 @@ class QuestService {
 
   static async getGiftQuest() {
     try {
-      const gifts = await giftQuestModel.find({});
+      const gifts = await giftModel.find({});
       return gifts;
     } catch (error) {
       console.log(error.message);
@@ -27,7 +27,7 @@ class QuestService {
 
   static async addGiftQuest(body) {
     try {
-      const newGiftQuest = new giftQuestModel(body);
+      const newGiftQuest = new giftModel(body);
       const saved = await newGiftQuest.save();
       return saved;
     } catch (error) {
@@ -38,7 +38,7 @@ class QuestService {
   static async updateGiftQuest(id, dropRate) {
     try {
       const conditions = { id };
-      const item = await giftQuestModel.updateMany(conditions, { $set: { dropRate } });
+      const item = await giftModel.updateMany(conditions, { $set: { dropRate } });
       return item;
     } catch (error) {
         console.log(error.message);
