@@ -1,17 +1,19 @@
-const { ButtonBuilder, ActionRowBuilder, SelectMenuOptionBuilder, StringSelectMenuOptionBuilder, StringSelectMenuBuilder } = require("@discordjs/builders");
+const { ButtonBuilder, ActionRowBuilder, SelectMenuOptionBuilder, StringSelectMenuOptionBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder } = require("@discordjs/builders");
 const connectDB = require("../DB/connection");
 const { userActionType, errors, emoji } = require("../constants/general");
 const messages = require("../constants/messages");
 const { createNormalMessage } = require("../messages/normalMessage");
 const { createUserMessage } = require("../messages/userMessage");
 const { UserService } = require("../services/user.service");
-const { checkingLastAttended, checkStreak, findRoleBuff, randomBetweenTwoNumber, getCurrentTime, convertDateTime } = require("../utils/index");
-const { ButtonStyle, ComponentType, ChannelType } = require("discord.js");
+const { checkingLastAttended, checkStreak, findRoleBuff, randomBetweenTwoNumber, getCurrentTime, convertDateTime, handleEmoji } = require("../utils/index");
+const { ButtonStyle, ComponentType, ChannelType, TextInputStyle } = require("discord.js");
 const { RoleService } = require("../services/role.service");
 const { RewardEnum } = require("../models/quest.model");
 const { FriendService } = require("../services/friend.service");
 const { BagItemType } = require("../models/user.model");
 const { typeBuffSpecial } = require("../models/specialItem.model");
+const { GiftService } = require("../services/gift.service");
+const { SpecialItemService } = require("../services/specialItem.service");
 connectDB();
 process.env.TZ = 'Asia/Bangkok';
 
@@ -41,7 +43,7 @@ const info = {
           {
             discordUserId: friend.discordUserId,
             relationship: getRelationship.relationship.name,
-            intimacyPoints: friend.intimacyPoints
+            intimacyPoints: getRelationship.intimacyPoints
           }
         );
       }
@@ -327,7 +329,7 @@ const giveTicket = {
             await logChannel.send(`[Transfer] <@${user.discordUserId}> chuyển <@${userReceived.discordUserId}> ${amount}${emoji.silverTicket} + tax: ${amountAfterTax - amount}${emoji.silverTicket}. <@${user.discordUserId}> còn ${userUpdated.tickets.silver}${emoji.silverTicket}. <@${userReceived.discordUserId}> tăng ${userReceivedUpdated.tickets.silver}${emoji.silverTicket}`);
           }
         } catch (error) {
-          console.log(error);
+          console.log(error, '[giveTickets confirm]');
         }
       });
     } catch (error) {
@@ -395,6 +397,7 @@ const top = {
       const silver = [];
       const golden = [];
       const completeQuest = [];
+      const farm = [];
       const users = await UserService.getAllUser();
       users.forEach(user => {
         silver.push({
@@ -412,12 +415,18 @@ const top = {
           quantity: user.totalQuestCompleted,
           type: 'completedQuest'
         })
+        farm.push({
+          discordUserId: user.discordUserId,
+          quantity: user.farm.exp,
+          type: 'farm'
+        })
       });
       
       const topSilver = silver.sort((a, b) => b.quantity - a.quantity);
       const topGolden = golden.sort((a, b) => b.quantity - a.quantity);
       const topCompleteQuest = completeQuest.sort((a, b) => b.quantity - a.quantity);
       const topFriends = friendsList.sort((a, b) => b.intimacyPoints - a.intimacyPoints);
+      const topFarm = farm.sort((a, b) => b.quantity - a.quantity);
       const select = new StringSelectMenuBuilder()
         .setCustomId('ranking')
         .setPlaceholder('Chọn vật bảng xếp hạng')
@@ -445,6 +454,12 @@ const top = {
             .setLabel('Bảng xếp hạng hoàn thành nhiệm vụ')
             .setDescription('Top 20 người chăm chỉ')
             .setValue('completeQuest')
+        )
+        .addOptions(
+          new StringSelectMenuOptionBuilder()
+            .setLabel('Bảng xếp hạng thần nông')
+            .setDescription('Top 20 thần nông')
+            .setValue('farm')
         );
       
       const row = new ActionRowBuilder().addComponents(select);
@@ -478,6 +493,10 @@ const top = {
             selectedOption = 'completeQuest';
             rankList = topCompleteQuest;
             rankingType = 'hoàn thành nhiệm vụ';
+          } else if (value === 'farm') {
+            selectedOption = 'farm';
+            rankList = topFarm;
+            rankingType = 'thần nông';
           } else {
             selectedOption = 'point';
             rankList = topFriends;
@@ -515,7 +534,13 @@ const top = {
                 .setDescription('Top 20 người chăm chỉ')
                 .setValue('completeQuest')
                 .setDefault(selectedOption === 'completeQuest')
-            );
+            )
+            .addOptions(
+              new StringSelectMenuOptionBuilder()
+                .setLabel('Bảng xếp hạng thần nông')
+                .setDescription('Top 20 thần nông')
+                .setValue('farm')
+            );;
 
           const rowNew = new ActionRowBuilder().addComponents(selectNew);
           await reply.edit({
@@ -523,7 +548,7 @@ const top = {
             components: [rowNew]
           });
         } catch (error) {
-          console.log(error);
+          console.log(error, '[choose Bxh]');
         }
       })
     } catch (error) {
@@ -532,4 +557,169 @@ const top = {
   }
 }
 
-module.exports = { info, tickets, daily, giveTicket, bag, top };
+const buffTicket = {
+  name: 'admin-buff-ticket',
+  execute: async interaction => {
+    try {
+      if (!interaction) return;
+      await interaction.deferReply();
+      if(interaction.user.id !== process.env.OWNER_ID && 
+        interaction.user.id !== process.env.DEVELOPER) {
+          await interaction.followUp({
+            embeds: [createNormalMessage(messages.notPermission)]
+          });
+          return;
+      }
+
+      const target = interaction.options.getUser('target');
+      const amount = interaction.options.getNumber('amount');
+      
+      const userReceived = await UserService.getUserById(target.id);
+      
+      if (!userReceived || !userReceived.discordUserId) {
+        await interaction.followUp({ embeds: [createNormalMessage(messages.giveUnreadyRegister(target.username))] });
+        return;
+      }
+
+      userReceived.tickets.silver = Math.floor(userReceived.tickets.silver + amount);
+
+      await UserService.updateUser(userReceived);
+
+      await interaction.followUp({ 
+        embeds: [createNormalMessage(`Đã chuyển ${amount}${emoji.silverTicket} cho ${target}`)]
+      });
+    } catch (error) {
+      console.log(error, '[giveTickets]');
+    }
+  }
+}
+
+const buffItem = {
+  name: 'admin-buff-item',
+  execute: async interaction => {
+    try {
+      if (!interaction) return;
+      await interaction.deferReply();
+      if(interaction.user.id !== process.env.OWNER_ID && 
+        interaction.user.id !== process.env.DEVELOPER) {
+          await interaction.followUp({
+            embeds: [createNormalMessage(messages.notPermission)]
+          });
+          return;
+      }
+      
+      const target = interaction.options.getUser('target');
+      
+      const userReceived = await UserService.getUserById(target.id);
+      
+      if (!userReceived || !userReceived.discordUserId) {
+        await interaction.followUp({ embeds: [createNormalMessage(messages.giveUnreadyRegister(target.username))] });
+        return;
+      }
+
+      const gifts = await GiftService.getAllGift();
+      const specialItems = await SpecialItemService.getAllItem();
+
+      const items = [...gifts, ...specialItems];
+
+      const select = new StringSelectMenuBuilder().setCustomId('chooseItem').setPlaceholder('Chọn quà muốn chuyển')
+      for (const item of items) {
+        select.addOptions(
+          new StringSelectMenuOptionBuilder()
+            .setLabel(item.name)
+            .setDescription(item.description)
+            .setValue(String(item._id))
+            .setEmoji(handleEmoji(item.giftEmoji || item.emoji))
+        );
+      }
+      const row = new ActionRowBuilder().addComponents(select);
+
+      const reply = await interaction.followUp({
+        embeds: [createNormalMessage(`Chọn vật phẩm muốn buff cho ${target}`)],
+        components: [row]
+      })
+
+      const selectCollect = reply.createMessageComponentCollector({
+        componentType: ComponentType.StringSelect,
+        filter: (i) => i.user.id === interaction.user.id && i.customId === 'chooseItem',
+        time: 300000
+      });
+
+      selectCollect.on('collect', async interaction => {
+        try {
+          const [value] = interaction.values;
+
+          const item = items.find(item => item._id.equals(value));
+
+          const modal = new ModalBuilder()
+          .setCustomId('addQuantity')
+          .setTitle(`Nhập số lượng ${item.name}`);
+  
+          const input = new TextInputBuilder()
+          .setCustomId(`quantity`)
+          .setLabel(`Số lượng`)
+          .setPlaceholder("Nhập số lượng")
+          .setMaxLength(10)
+          .setStyle(TextInputStyle.Short);
+  
+          const firstActionRow = new ActionRowBuilder().addComponents(input);
+      
+          modal.addComponents(firstActionRow);
+          await interaction.showModal(modal);
+          
+          const submitted = await interaction.awaitModalSubmit({
+            time: 60000,
+            filter: i => i.user.id === interaction.user.id,
+          });
+
+          if (submitted) {
+            try {
+              await submitted.deferUpdate();
+              const quantity = submitted.fields.getTextInputValue('quantity');
+              const userBag = userReceived.itemBag;
+              const existItem = userBag.findIndex(data => data._id.equals(item._id))
+              if (existItem !== -1) {
+                userBag[existItem].quantity += Number(quantity);
+              } else {
+                const itemToAdd = {
+                  _id: item._id,
+                  name: item.name,
+                  description: item.description,
+                  type: item.type,
+                  intimacyPoints: item.intimacyPoints,
+                  quantity: Number(quantity),
+                  giftEmoji: item.giftEmoji || item.emoji,
+                } 
+                if (item.type === BagItemType.RING_PIECE) {
+                  itemToAdd.specialValue = item.weedingPiece.value;
+                }
+                if (item.type === BagItemType.FRIEND_RING || item.type === BagItemType.WEEDING_RING) {
+                  itemToAdd.typeBuff = item.buffInfo.typeBuff;
+                  itemToAdd.valueBuff = item.buffInfo.valueBuff;
+                }
+                userBag.push(itemToAdd);
+              }
+
+              await UserService.updateUser(userReceived);
+              await reply.edit({
+                embeds: [createNormalMessage(`Đã chuyển x${quantity} ${item.giftEmoji || item.emoji} ${item.name} cho ${target}`)]
+              })
+              
+            } catch (error) {
+              console.log(error, '[quantity submit]');          
+            }
+          }
+        } catch (error) {
+          console.log(error, '[quantity choose]');          
+        }
+      })
+
+      await UserService.updateUser(userReceived);
+
+    } catch (error) {
+      console.log(error, '[giveTickets]');
+    }
+  }
+}
+
+module.exports = { info, tickets, daily, giveTicket, bag, top, buffTicket, buffItem };

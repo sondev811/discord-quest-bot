@@ -7,7 +7,7 @@ const { createUserMessage } = require("../messages/userMessage");
 const { TaskTypeEnum, ActionEnum, RewardEnum } = require("../models/quest.model");
 const { QuestService } = require("../services/quest.service");
 const { UserService } = require("../services/user.service");
-const { checkingLastAttended, getTimeToEndOfDay, isSameWeek, getTimeToEndOfWeek, randomBetweenTwoNumber, handleEmoji, getCurrentTime, randomGiftReward } = require("../utils");
+const { checkingLastAttended, getTimeToEndOfDay, isSameWeek, getTimeToEndOfWeek, randomBetweenTwoNumber, handleEmoji, getCurrentTime, randomGiftReward, randomSeedReward, randomFarmItemReward } = require("../utils");
 const { ComponentType, ButtonStyle, TextInputStyle } = require("discord.js");
 const { LevelService } = require("../services/level.service");
 const { ShopService } = require("../services/shop.service");
@@ -15,23 +15,41 @@ const { createQuestMessage } = require("../messages/questMessage");
 const { BagItemType } = require("../models/user.model");
 const { specialItemType } = require("../models/specialItem.model");
 const { GiftService } = require("../services/gift.service");
+const { SeedService } = require("../services/farmService");
+const { seedType } = require("../models/seed.model");
+const { farmShopType } = require("../models/farmShop.model");
 connectDB();
 process.env.TZ = 'Asia/Bangkok';
 
-const randomReward = (rewards, gifts, resetTicket) => {
+const randomReward = (rewards, gifts, resetTicket, seeds, farmItems) => {
   const data = []
-  rewards.forEach(reward => {
+  for(const reward of rewards) {
     const randomReward = randomBetweenTwoNumber(reward.minQuantity, reward.maxQuantity);
     if (reward.type === RewardEnum.GIFT && gifts.length) {
       const result = randomGiftReward(gifts, randomReward);
       data.push(...result);
-      return;
+      continue;
     }
+  
+    if (reward.type === RewardEnum.SEED) {
+      const result = randomSeedReward(seeds, randomReward);
+      data.push(...result);
+      continue;
+    }
+
+    if (reward.type === RewardEnum.FARM_ITEM) {
+      const result = randomFarmItemReward(farmItems, randomReward);
+      data.push(...result);
+      continue;
+    }
+  
     data.push({
       rewardType: reward.type,
       quantity: randomReward
     })
-  });
+
+  }
+  
   if (resetTicket) {
     data.push({
       _id: resetTicket.questItem._id,
@@ -54,26 +72,43 @@ const handleDescription = (action, placeChannel, quantity) => {
   return descriptionQuest[action](quantity, placeChannel);
 }
 
-const filterQuest = (quests, type, gifts, resetTicket) => {
+const randomSeeds = async () => {
+  try {
+    const itemsShop = await ShopService.getFarmShop();
+    const plantSeeds = itemsShop.filter(
+      item => item.type === farmShopType.seed && item.seedInfo.type === seedType.plant && item.seedInfo.growthTime <= 12);
+    const randomSeed = plantSeeds[Math.floor(Math.random() * plantSeeds.length)];
+    return { emoji: randomSeed.seedInfo.adultEmoji, name: randomSeed.seedInfo.name};
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+const filterQuest = async (quests, type, gifts, resetTicket, seeds, farmItems) => {
   const filtered = quests.filter(item => item.type === type);
   const data = [];
+  const { emoji, name } = await randomSeeds();
   filtered.forEach(item => {
-    const completionCriteria = randomBetweenTwoNumber(item.minCompletionCriteria, item.maxCompletionCriteria)
+    const completionCriteria = randomBetweenTwoNumber(item.minCompletionCriteria, item.maxCompletionCriteria);
     data.push({
       questId: item.id,
       completionCriteria,
       action: item.action,
-      placeChannel: item.placeChannel,
+      placeChannel: item.action === ActionEnum.FARM ? emoji : item.placeChannel,
       progress: 0,
-      rewards: randomReward(item.rewards, gifts, resetTicket),
-      description: handleDescription(item.action, item.placeChannel, completionCriteria),
+      rewards: randomReward(item.rewards, gifts, resetTicket, seeds, farmItems),
+      description: handleDescription(
+        item.action, 
+        item.action === ActionEnum.FARM ? `${emoji} ${name}` : item.placeChannel,
+        completionCriteria
+      ),
       isReceivedReward: false,
     })
   })
   return data;
 };
 
-const messageQuests = (quests) => quests.filter(quest => quest.action === ActionEnum.MESSAGE);
+const messageQuests = (quests) => quests.filter(quest => quest.action === ActionEnum.MESSAGE || quest.action === ActionEnum.FARM);
 
 const postQuests = (quests) => quests.filter(
   quest => [
@@ -137,7 +172,7 @@ const handleQuestLevel = (level, quests) => {
     }
     return pickQuest;
   } catch (error) {
-    console.log(error);
+    console.log(error, '[pick quest]');
   }
 }
 
@@ -187,7 +222,7 @@ const upgradeQuestExecute = async (reply, backQuestBoard, discordId) => {
       components: [row]
     });
   } catch (error) {
-    console.log(error);
+    console.log(error, '[upgradeQuestExecute]');
   }
 }
 
@@ -226,7 +261,9 @@ const backToBoardExecute = async (reply, discordId, rowBtnUpgradeGuideRewardDail
 
     const userUpdate = await UserService.getUserById(discordId);
 
-    body.quests = userUpdate.quests.dailyQuestsReceived.quests;
+    const quest = await getQuest(userUpdate.quests.dailyQuestsReceived.quests);
+
+    body.quests = quest;
     body.endTime = `${hoursRemaining} giờ ${minutesRemaining} phút ${secondsRemaining} giây`;
     body.questType = 'daily';
     body.totalTicketClaimDaily = userUpdate.totalTicketClaimDaily;
@@ -245,25 +282,12 @@ const backToBoardExecute = async (reply, discordId, rowBtnUpgradeGuideRewardDail
         body.resetQuantity = 0;
       }
 
-      const isReceivedReward = rewardChecking(userUpdate.quests.dailyQuestsReceived.quests);
-      const isShowSubmitItemBtn = submitItemChecking(userUpdate.quests.dailyQuestsReceived.quests);
+      const isReceivedReward = rewardChecking(quest);
       
       if (body.resetQuantity > 0 && !isReceivedReward) {
-        // if (isShowSubmitItemBtn) {
-        //   const rowResetAndSubmit = initResetAndSubmit('full');
-        //   components.push(rowResetAndSubmit);
-        // } else {
           const rowResetAndSubmit = initResetAndSubmit('reset');
           components.push(rowResetAndSubmit);
-        // }
       } 
-      // else {  
-      //   if (isShowSubmitItemBtn) {
-      //     const rowResetAndSubmit = initResetAndSubmit('submit');
-      //     components.push(rowResetAndSubmit);
-      //   }
-      // }
-
     }
 
     await reply.edit({
@@ -271,7 +295,7 @@ const backToBoardExecute = async (reply, discordId, rowBtnUpgradeGuideRewardDail
       components: [...components]
     });
   } catch (error) {
-    console.log(error);
+    console.log(error, '[backToBoardExecute]');
   }  
 }
 
@@ -279,15 +303,28 @@ const resetQuestExecute = async (reply, backQuestBoard, discordId) => {
   try {
     const user = await UserService.getUserById(discordId);
     const quests = await QuestService.getAllQuest();
+    const seeds = await SeedService.getAllSeed();
+    const farmItems = await SeedService.getAllFarmItems();
     if (!quests || !quests.length) {
       throw new Error(errors.GET_ALL_QUEST_ERROR);
     }
-    const dailyQuests = filterQuest(quests, TaskTypeEnum.DAILY, [], null);
+    const dailyQuests = await filterQuest(quests, TaskTypeEnum.DAILY, [], null, seeds, farmItems);
   
     const getDailyQuestWithLevel = handleQuestLevel(user.level.value, dailyQuests);
+
+    const collectQuest = []
+
+      for(const quest of getDailyQuestWithLevel) {
+        quest.questType = TaskTypeEnum.DAILY;
+        const newQuest = await QuestService.addQuest(quest);
+        collectQuest.push({
+          _id: newQuest._id,
+          action: newQuest.action
+        })
+      }
     
     user.quests.dailyQuestsReceived.timeReceivedQuest = new Date();
-    user.quests.dailyQuestsReceived.quests = getDailyQuestWithLevel;
+    user.quests.dailyQuestsReceived.quests = collectQuest;
     
     const position = checkExistResetQuest(user.itemBag);
     if (user.itemBag[position].quantity === 1) {
@@ -306,7 +343,7 @@ const resetQuestExecute = async (reply, backQuestBoard, discordId) => {
       components: [rowBack]
     });
   } catch (error) {
-    console.log(error);
+    console.log(error, '[resetQuestExecute]');
   }
 }
 
@@ -317,21 +354,28 @@ const rewardQuestDailyExecute = async (reply, backQuestBoard, discordId) => {
     let silverEarning = 0;
     let goldenEarning = 0;
     let countSuccessQuest = 0;
-    quests.forEach(quest => {
+    const tempBag = [];
+
+    const listQuest = await getQuest(quests);
+
+    for(const quest of listQuest) {
       if (quest.progress >= quest.completionCriteria && !quest.isReceivedReward) {
-        quest.rewards.forEach(reward => {
+        for(const reward of quest.rewards) {
           if (reward.rewardType === RewardEnum.SILVER_TICKET) {
             silverEarning += reward.quantity;
+            continue;
           }
           if (reward.rewardType === RewardEnum.GOLD_TICKET) {
             goldenEarning += reward.quantity;
+            continue
           }
-        });
-        quest.isReceivedReward = true;
+          tempBag.push(reward);
+        }
         countSuccessQuest++;
+        await QuestService.updateReceiveRewardQuest(quest._id);
       }
-    });
-  
+    }
+
     const rowBack = new ActionRowBuilder()
     .addComponents([backQuestBoard]);
   
@@ -342,7 +386,7 @@ const rewardQuestDailyExecute = async (reply, backQuestBoard, discordId) => {
       })
       return;
     }
-    user.quests.dailyQuestsReceived.quests = quests;
+ 
     user.tickets.silver += silverEarning;
     user.tickets.gold += goldenEarning;
     user.totalTicketClaimDaily += silverEarning;
@@ -353,6 +397,24 @@ const rewardQuestDailyExecute = async (reply, backQuestBoard, discordId) => {
       user.tickets.silver = user.tickets.silver - quantity;
       user.totalTicketClaimDaily = user.totalTicketClaimDaily - quantity;
     }
+
+    tempBag.forEach(bag => {
+      const itemExistOnBag = user.itemBag.findIndex(item => item._id.equals(bag._id));
+      if (itemExistOnBag === -1) {
+        const itemToAdd = {
+          _id: bag._id,
+          name: bag.name,
+          description: bag.description,
+          type: bag.rewardType,
+          seedInfo: bag.seedInfo,
+          farmItemInfo: bag.farmItemInfo,
+          quantity: bag.quantity,
+        } 
+        user.itemBag.push(itemToAdd);
+      } else {
+        user.itemBag[itemExistOnBag].quantity += bag.quantity;
+      }
+    })
   
     await UserService.updateUser(user);
     
@@ -361,36 +423,38 @@ const rewardQuestDailyExecute = async (reply, backQuestBoard, discordId) => {
       components: [rowBack]
     })
   } catch (error) {
-    console.log(error);
+    console.log(error, '[rewardQuestDailyExecute]');
   }
 }
 
 const rewardQuestWeekExecute = async (reply, backQuestBoard, discordId) => {
   try {
     const user = await UserService.getUserById(discordId);
-    const quests = user.quests.weekQuestsReceived.quests;
+    const quests = await getQuest(user.quests.weekQuestsReceived.quests);
     let silverEarning = 0;
     let goldEarning = 0;
     let countSuccessQuest = 0;
     const tempBag = [];
-    quests.forEach(quest => {
+    
+    for(const quest of quests) {
       if (quest.progress >= quest.completionCriteria && !quest.isReceivedReward) {
-        quest.rewards.forEach(reward => {
+        for(const reward of quest.rewards) {
           if (reward.rewardType === RewardEnum.SILVER_TICKET) {
             silverEarning += reward.quantity;
+            continue;
           }
           if (reward.rewardType === RewardEnum.GOLD_TICKET) {
             goldEarning += reward.quantity;
+            continue
           }
-          if (reward.rewardType === RewardEnum.GIFT || reward.rewardType === RewardEnum.QUEST_RESET) {
-            tempBag.push(reward);
-          }
-        });
-        quest.isReceivedReward = true;
+          tempBag.push(reward);
+        }
         countSuccessQuest++;
+        await QuestService.updateReceiveRewardQuest(quest._id);
       }
-    });
-  
+
+    }
+
     const rowBack = new ActionRowBuilder()
     .addComponents([backQuestBoard]);
   
@@ -401,7 +465,7 @@ const rewardQuestWeekExecute = async (reply, backQuestBoard, discordId) => {
       })
       return;
     }
-    user.quests.weekQuestsReceived.quests = quests;
+ 
     user.tickets.silver += silverEarning;
     user.tickets.gold += goldEarning;
     user.totalTicketClaimDaily += silverEarning;
@@ -418,7 +482,9 @@ const rewardQuestWeekExecute = async (reply, backQuestBoard, discordId) => {
           intimacyPoints: bag.intimacyPoints,
           giftEmoji: bag.giftEmoji,
           quantity: bag.quantity,
-          valueBuff: bag.valueBuff
+          valueBuff: bag.valueBuff,
+          seedInfo: bag.seedInfo,
+          farmItemInfo: bag.farmItemInfo,
         } 
         user.itemBag.push(itemToAdd);
       } else {
@@ -439,7 +505,7 @@ const rewardQuestWeekExecute = async (reply, backQuestBoard, discordId) => {
       components: [rowBack]
     })
   } catch (error) {
-    console.log(error);
+    console.log(error, '[rewardQuestWeekExecute]');
   }
 }
 
@@ -568,6 +634,15 @@ const rewardChecking = (quests) => {
   return isReceivedReward;
 }
 
+const getQuest = async (data) => {
+  const quests = [];
+  for(const item of data) {
+    const quest = await QuestService.getQuest(item._id);
+    quests.push(quest);
+  }
+  return quests;
+}
+
 const reply = async (interaction, user, avatar, discordId) => {
   try {
     const { hoursRemaining, minutesRemaining, secondsRemaining } = getTimeToEndOfDay();
@@ -578,13 +653,15 @@ const reply = async (interaction, user, avatar, discordId) => {
       rowBtnUpgradeGuideRewardWeek, 
       backQuestBoard
     } = initButtonAndSelect();
+
+    const quests = await getQuest(user.quests.dailyQuestsReceived.quests);
     
     const body = { 
       totalQuestCompleted: user.totalQuestCompleted, 
       totalTicketClaimDaily: user.totalTicketClaimDaily,
       maxTicket: user.level.limitTicketDaily,
       endTime: `${hoursRemaining} giờ ${minutesRemaining} phút ${secondsRemaining} giây`,
-      quests: user.quests.dailyQuestsReceived.quests,
+      quests,
       username: user.username,
       discordUserId: user.discordUserId,
       avatar,
@@ -594,15 +671,11 @@ const reply = async (interaction, user, avatar, discordId) => {
       resetQuantity: 0
     }
   
-    const quests = user.quests.dailyQuestsReceived.quests;
-  
     const isReceivedReward = rewardChecking(quests);
   
     const componentInit = [rowSelect, rowBtnUpgradeGuideRewardDaily];
   
     const isHaveResetTicket = checkExistResetQuest(user.itemBag);
-  
-    const isShowSubmitItemBtn = submitItemChecking(quests);
   
     if (isHaveResetTicket !== -1) {
       body.resetQuantity = user.itemBag[isHaveResetTicket].quantity;
@@ -611,20 +684,9 @@ const reply = async (interaction, user, avatar, discordId) => {
     }
   
     if (body.resetQuantity > 0 && !isReceivedReward) {
-      // if (isShowSubmitItemBtn) {
-      //   const rowResetAndSubmit = initResetAndSubmit('full');
-      //   componentInit.push(rowResetAndSubmit);
-      // } else {
         const rowResetAndSubmit = initResetAndSubmit('reset');
         componentInit.push(rowResetAndSubmit);
-      // }
     } 
-    // else {  
-    //   if (isShowSubmitItemBtn) {
-    //     const rowResetAndSubmit = initResetAndSubmit('submit');
-    //     componentInit.push(rowResetAndSubmit);
-    //   }
-    // }
   
     const reply = await interaction.followUp({
       embeds: [createUserMessage(userActionType.getQuest, body)],
@@ -639,14 +701,15 @@ const reply = async (interaction, user, avatar, discordId) => {
     
     collector.on('collect', async (interaction) => {
       try {
-        interaction.deferUpdate();
+        await interaction.deferUpdate();
         const [value] = interaction.values;
         let selectedOption = 'dailyQuest';
         
         if (value === 'weekQuest') {
           const { hoursRemaining, minutesRemaining, secondsRemaining } = getTimeToEndOfWeek();
           const userUpdate = await UserService.getUserById(discordId);
-          body.quests = userUpdate.quests.weekQuestsReceived.quests
+          const quests = await getQuest(userUpdate.quests.weekQuestsReceived.quests);
+          body.quests = quests;
           body.endTime = `${hoursRemaining} giờ ${minutesRemaining} phút ${secondsRemaining} giây`;
           body.questType = 'week';
           selectedOption = 'weekQuest';
@@ -657,7 +720,8 @@ const reply = async (interaction, user, avatar, discordId) => {
             await interaction.followUp({ embeds: [createNormalMessage(messages.unreadyRegisterBot)] });
             return;
           }
-          body.quests = userUpdate.quests.dailyQuestsReceived.quests
+          const quests = await getQuest(userUpdate.quests.dailyQuestsReceived.quests);
+          body.quests = quests;
           body.endTime = `${hoursRemaining} giờ ${minutesRemaining} phút ${secondsRemaining} giây`;
           body.questType = 'daily';
           selectedOption = 'dailyQuest';
@@ -694,23 +758,11 @@ const reply = async (interaction, user, avatar, discordId) => {
         
         if (selectedOption === 'dailyQuest') {
           const isReceivedReward = rewardChecking(body.quests);
-          const isShowSubmitItemBtn = submitItemChecking(body.quests);
   
           if (body.resetQuantity > 0 && !isReceivedReward) {
-            // if (isShowSubmitItemBtn) {
-            //   const rowResetAndSubmit = initResetAndSubmit('full');
-            //   components.push(rowResetAndSubmit);
-            // } else {
               const rowResetAndSubmit = initResetAndSubmit('reset');
               components.push(rowResetAndSubmit);
-            // }
           } 
-          // else {  
-          //   if (isShowSubmitItemBtn) {
-          //     const rowResetAndSubmit = initResetAndSubmit('submit');
-          //     components.push(rowResetAndSubmit);
-          //   }
-          // }
         }
   
         const message = await interaction.channel?.messages.fetch(interaction.message.id);
@@ -721,7 +773,7 @@ const reply = async (interaction, user, avatar, discordId) => {
         });
   
       } catch (error) {
-        console.log(error);      
+        console.log(error, '[Choose quest]');      
       }
     });
   
@@ -739,7 +791,7 @@ const reply = async (interaction, user, avatar, discordId) => {
   
     collectorButton.on('collect', async (interaction) => {
       try {
-        interaction.deferUpdate();
+        await interaction.deferUpdate();
         const type = interaction.customId;
         
         if (type === 'upgradeQuest') {
@@ -784,11 +836,11 @@ const reply = async (interaction, user, avatar, discordId) => {
         });
        
       } catch (error) {
-        console.log(error);      
+        console.log(error, '[upgradeQuest]');      
       }
     })
   } catch (error) {
-    console.log(error);
+    console.log(error, '[reply quest]');
   }
 }
 
@@ -816,14 +868,26 @@ const quest = {
 
       const isNotReceiveWeekQuest = !isSameWeek(user.quests.weekQuestsReceived.timeReceivedQuest, new Date()) || !user.quests.weekQuestsReceived.quests.length; 
       if (isNotReceiveWeekQuest) {
-        const gifts = await QuestService.getGiftQuest();
+        const gifts = await GiftService.getAllGift();
+        const seeds = await SeedService.getAllSeed();
+        const farmItems = await SeedService.getAllFarmItems();
         if (!gifts.length) return;
         const itemQuest = await ShopService.getQuestShop();
         const resetTicket = itemQuest.find(item => item.questItem.type === specialItemType.RESET_QUEST);
-        const weekQuests = filterQuest(quests, TaskTypeEnum.WEEK, gifts, resetTicket);
+        const weekQuests = await filterQuest(quests, TaskTypeEnum.WEEK, gifts, resetTicket, seeds, farmItems);
         const getWeekQuestWithLevel = getRandomQuest(weekQuests);
+        
+        getWeekQuestWithLevel.questType = TaskTypeEnum.WEEK;
+
+        const newQuest = await QuestService.addQuest(getWeekQuestWithLevel);
+
+        const collectQuest = [{
+          _id: newQuest._id,
+          action: newQuest.action
+        }];
+
         user.quests.weekQuestsReceived.timeReceivedQuest = new Date();
-        user.quests.weekQuestsReceived.quests = getWeekQuestWithLevel;
+        user.quests.weekQuestsReceived.quests = collectQuest;
         await UserService.updateUser(user);
       }
 
@@ -833,12 +897,26 @@ const quest = {
         return user;
       }
 
-      const dailyQuests = filterQuest(quests, TaskTypeEnum.DAILY, []);
+      const seeds = await SeedService.getAllSeed();
+      const farmItems = await SeedService.getAllFarmItems();
+
+      const dailyQuests = await filterQuest(quests, TaskTypeEnum.DAILY, [], null, seeds, farmItems);
       
       const getDailyQuestWithLevel = handleQuestLevel(user.level.value, dailyQuests);
+
+      const collectQuest = []
+
+      for(const quest of getDailyQuestWithLevel) {
+        quest.questType = TaskTypeEnum.DAILY;
+        const newQuest = await QuestService.addQuest(quest);
+        collectQuest.push({
+          _id: newQuest._id,
+          action: newQuest.action
+        })
+      }
       
-      user.quests.dailyQuestsReceived.timeReceivedQuest = new Date();;
-      user.quests.dailyQuestsReceived.quests = getDailyQuestWithLevel;
+      user.quests.dailyQuestsReceived.timeReceivedQuest = new Date();
+      user.quests.dailyQuestsReceived.quests = collectQuest;
       user.totalTicketClaimDaily = 0;
 
       await UserService.updateUser(user);
@@ -915,7 +993,7 @@ const giftQuest = {
             time: 60000,
             filter: i => i.user.id === interaction.user.id,
           }).catch(error => {
-            console.error(error)
+            console.error(error, '[modal submit]')
             return null
           })
           if (submitted) {
@@ -929,7 +1007,7 @@ const giftQuest = {
             })
           }
         } catch (error) {
-          console.log(error);          
+          console.log(error, '[update rate]');          
         }
       })
     } catch (error) {

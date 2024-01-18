@@ -7,7 +7,7 @@ class LevelService {
       const levels = await levelModel.find({});
       return levels;
     } catch (error) {
-        console.log(error.message);
+        console.log(error, '[getAllLevel]');
     }
   }
 
@@ -17,7 +17,7 @@ class LevelService {
       const levels = await levelModel.find(query);
       return levels;
     } catch (error) {
-        console.log(error.message);
+        console.log(error, '[getLevelByValue]');
     }
   }
 }

@@ -10,7 +10,7 @@ class FriendService {
       const newRelationship = await newRelationshipModel.save();
       return newRelationship;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[createRelationship]');
       return null;
     }
   }
@@ -26,7 +26,7 @@ class FriendService {
       const removed = await friendModel.deleteMany(conditions);
       return removed;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[removeRelationship]');
     }
   }
 
@@ -41,7 +41,7 @@ class FriendService {
       const item = await friendModel.updateMany(conditions, { $set: { intimacyPoints } });
       return item;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[updateIntimacyPoints]');
     }
   }
 
@@ -56,7 +56,7 @@ class FriendService {
       const relationShip = await friendModel.findOne(conditions);
       return relationShip;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[updateIntimacyPoints]');
     }
   }
 
@@ -71,7 +71,7 @@ class FriendService {
       const userUpdated = await friendModel.updateMany(conditions, { $set: { relationship: data } });
       return userUpdated;
     } catch (error) {
-      console.log(error.message);
+      console.log(error, '[updateFriendRelationship]');
       return null;
     }
   }
@@ -87,7 +87,7 @@ class FriendService {
       const userUpdated = await friendModel.updateMany(conditions, { $set: { marriedDate, order, isMarried: true } });
       return userUpdated;
     } catch (error) {
-      console.log(error.message);
+      console.log(error, '[updateFriendRelationshipDateAndOrder]');
       return null;
     }
   }
@@ -97,7 +97,7 @@ class FriendService {
       const relationship = await friendModel.find({ isMarried: true });
       return relationship;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[getOrderRelationship]');
     }
   }
 
@@ -112,7 +112,7 @@ class FriendService {
       const item = await friendModel.updateMany(conditions, { $set: { intimacyPoints } });
       return item;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[updateIntimacyPoints]');
     }
   }
 
@@ -121,7 +121,7 @@ class FriendService {
       const friends = await friendModel.find();
       return friends;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[getAllFriends]');
     }
   }
 
@@ -130,7 +130,7 @@ class FriendService {
       const relationships = await relationshipModel.find();
       return relationships;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[getAllRelationship]');
     }
   }
 
@@ -140,7 +140,7 @@ class FriendService {
       const relationship = await relationshipModel.findOne(condition);
       return relationship;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[getRelationshipByLevel]');
     }
   }
 
@@ -155,7 +155,7 @@ class FriendService {
       const relationShip = await friendModel.find(conditions);
       return relationShip;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[getAllRelationshipById]');
     }
   }
 
@@ -167,7 +167,7 @@ class FriendService {
       const weedingRing = await specialItemModel.findOne(condition);
       return weedingRing;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[getWeedingRing]');
     }
   }
 }

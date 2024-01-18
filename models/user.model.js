@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const { levelSchema } = require('./level.model');
 const { ActionEnum } = require('./quest.model');
+const { seedSchema } = require('./seed.model');
+const { farmItemSchema } = require('./farmItem.model');
 process.env.TZ = 'Asia/Bangkok';
 
 const RewardEnum = {
@@ -17,7 +19,9 @@ const BagItemType = {
   WEEDING_RING: 'weedingRing',
   RESET_QUEST: 'resetQuest',
   FRIEND_RING: 'friendRing',
-  CERTIFICATE: 'certificate'
+  CERTIFICATE: 'certificate',
+  SEED: 'seed',
+  FARM_ITEM: 'farmItem'
 }
 
 const userSchema = new mongoose.Schema({
@@ -62,6 +66,8 @@ const userSchema = new mongoose.Schema({
       valueBuff: { type: String },
       giftEmoji: { type: String },
       specialValue: { type: Number },
+      seedInfo: seedSchema,
+      farmItemInfo: farmItemSchema
     }
   ],
   totalQuestCompleted: {
@@ -77,26 +83,8 @@ const userSchema = new mongoose.Schema({
       timeReceivedQuest: { type: Date, default: null },
       quests: [
         {
-          questId: { type: String, require: true },
-          completionCriteria: { type: Number, default: 0, required: true },
-          description: { type: String, default: ''},
-          progress: { type: Number, default: 0 }, // tiến độ
-          action: { type: String, enum: Object.values(ActionEnum), required: true },
-          placeChannel: { type: String },
-          rewards: [
-            {
-              rewardType: {
-                type: String,
-                enum: Object.values(RewardEnum),
-                required: true,
-              },
-              quantity: { type: Number, required: true },
-              giftId: {
-                type: String,
-              }
-            }
-          ], // mảng phần thưởng, có thể là ticket + quà tặng
-          isReceivedReward: { type: Boolean } // đã nhận phần thưởng?
+          _id: { type: mongoose.Schema.Types.ObjectId, required: true },
+          action: { type: String, required: true, enums: Object.values(ActionEnum)}
         }
       ]
     },
@@ -104,29 +92,8 @@ const userSchema = new mongoose.Schema({
       timeReceivedQuest: { type: Date, default: null },
       quests: [
         {
-          questId: { type: String, require: true },
-          completionCriteria: { type: Number, default: 100, required: true},
-          description: { type: String, default: ''},
-          progress: { type: Number, default: 0 }, // tiến độ
-          action: { type: String, enum: Object.values(ActionEnum), required: true },
-          placeChannel: { type: String },
-          rewards: [
-            {
-              rewardType: {
-                type: String,
-                enum: Object.values(RewardEnum),
-                required: true,
-              },
-              quantity: { type: Number, required: true },
-              giftId: { type: String, default: '' },
-              description: { type: String },
-              giftEmoji: { type: String },
-              name: { type: String },
-              intimacyPoints: { type: Number },
-              valueBuff: { type: String, default: ''}
-            }
-          ], // mảng phần thưởng, có thể là ticket + quà tặng
-          isReceivedReward: { type: Boolean } // đã nhận phần thưởng?
+          _id: { type: mongoose.Schema.Types.ObjectId, required: true },
+          action: { type: String, required: true, enums: Object.values(ActionEnum)}
         }
       ]
     }
@@ -134,13 +101,19 @@ const userSchema = new mongoose.Schema({
   giftsGiven: [
     {
       _id: { type: mongoose.Schema.Types.ObjectId, required: true },
-      giftEmoji: { type: String, required: true },
-      name: { type: String, required: true },
-      quantity: { type: Number, default: 0, required: true }
+      giftEmoji: { type: String },
+      name: { type: String },
+      quantity: { type: Number, default: 0 }
     }
   ],
   joinVoiceDate: { type: Date, default: null },
-  maxFriend: { type: Number, default: 5 }
+  maxFriend: { type: Number, default: 5 },
+  farm: {
+    land: { type: Number, default: 6 },
+    cage: { type: Number, default: 2 },
+    aquarium: { type: Number, default: 2 },
+    exp: { type: Number, default: 0 },
+  }
 });
 
-module.exports = { userModel: mongoose.model('users', userSchema), BagItemType};
+module.exports = { userModel: mongoose.model('users', userSchema), BagItemType, userSchema};

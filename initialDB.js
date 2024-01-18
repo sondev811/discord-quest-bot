@@ -116,374 +116,596 @@ const initializeDatabase = async () => {
     //   console.log('Default relationship inserted successfully.');
     // }
 
-    // const existingQuest = await questModel.find();
+    const existingQuest = await questModel.find();
 
-    // if (existingQuest.length === 0) {
-    //   const defaultQuest = [
-    //     {
-    //       id: '1',
-    //       type: TaskTypeEnum.DAILY,
-    //       description: `Nhắn tin bất kỳ channel`,
-    //       action: ActionEnum.MESSAGE,
-    //       placeChannel: '',
-    //       minCompletionCriteria: 400,
-    //       maxCompletionCriteria: 600,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 200,
-    //           maxQuantity: 600
-    //         }
-    //       ]
-    //     },
-    //     { 
-    //       id: '2',
-    //       type: TaskTypeEnum.DAILY,
-    //       description: `Nhắn tin tại channel`,
-    //       action: ActionEnum.MESSAGE,
-    //       placeChannel: '1142667605761605753',
-    //       minCompletionCriteria: 200,
-    //       maxCompletionCriteria: 400,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 200,
-    //           maxQuantity: 600
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '3',
-    //       type: TaskTypeEnum.DAILY,
-    //       description: `Đăng bài tại channel feeds`,
-    //       action: ActionEnum.POST_BLOG,
-    //       placeChannel: '1164592748758839306',
-    //       minCompletionCriteria: 5,
-    //       maxCompletionCriteria: 12,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 200,
-    //           maxQuantity: 600
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '4',
-    //       type: TaskTypeEnum.DAILY,
-    //       description: ` Bình luận bài post`,
-    //       action: ActionEnum.REPLY_POST_BLOG,
-    //       placeChannel: '1164592748758839306',
-    //       minCompletionCriteria: 6,
-    //       maxCompletionCriteria: 13,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 200,
-    //           maxQuantity: 600
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '5',
-    //       type: TaskTypeEnum.DAILY,
-    //       description: `Đăng bài tại channel confession`,
-    //       action: ActionEnum.POST_CONFESSION,
-    //       placeChannel: '1158851593802887229',
-    //       minCompletionCriteria: 1,
-    //       maxCompletionCriteria: 3,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 200,
-    //           maxQuantity: 600
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '6',
-    //       type: TaskTypeEnum.DAILY,
-    //       description: `Trả lời confession`,
-    //       action: ActionEnum.REPLY_CONFESSION,
-    //       placeChannel: '1158851593802887229',
-    //       minCompletionCriteria: 3,
-    //       maxCompletionCriteria: 7,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 200,
-    //           maxQuantity: 600
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '7',
-    //       type: TaskTypeEnum.DAILY,
-    //       description: `Tặng quà cho một người bất kỳ`,
-    //       action: ActionEnum.GIFT,
-    //       placeChannel: '',
-    //       minCompletionCriteria: 1,
-    //       maxCompletionCriteria: 2,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 200,
-    //           maxQuantity: 800
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '8',
-    //       type: TaskTypeEnum.DAILY,
-    //       description: `Boost Server 1 lần`,
-    //       action: ActionEnum.BOOST_SERVER,
-    //       placeChannel: '',
-    //       minCompletionCriteria: 1,
-    //       maxCompletionCriteria: 1,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 400,
-    //           maxQuantity: 1000
-    //         },
-    //         {
-    //           type: RewardEnum.GOLD_TICKET,
-    //           minQuantity: 7,
-    //           maxQuantity: 15
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '9',
-    //       type: TaskTypeEnum.DAILY,
-    //       description: `Treo voice`,
-    //       action: ActionEnum.VOICE,
-    //       placeChannel: '',
-    //       minCompletionCriteria: 2,
-    //       maxCompletionCriteria: 9,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 200,
-    //           maxQuantity: 600
-    //         }
-    //       ]
-    //     },
-    //     // week task
-    //     {
-    //       id: '10',
-    //       type: TaskTypeEnum.WEEK,
-    //       description: `Nhắn tin bất kỳ channel`,
-    //       action: ActionEnum.MESSAGE,
-    //       placeChannel: '',
-    //       minCompletionCriteria: 1000,
-    //       maxCompletionCriteria: 3000,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 1000,
-    //           maxQuantity: 3000
-    //         },
-    //         {
-    //           type: RewardEnum.GOLD_TICKET,
-    //           minQuantity: 7,
-    //           maxQuantity: 15
-    //         },
-    //         {
-    //           type: RewardEnum.GIFT,
-    //           minQuantity: 2,
-    //           maxQuantity: 3
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '11',
-    //       type: TaskTypeEnum.WEEK,
-    //       description: `Nhắn tin tại channel`,
-    //       action: ActionEnum.MESSAGE,
-    //       placeChannel: '1142667605761605753',
-    //       minCompletionCriteria: 1000,
-    //       maxCompletionCriteria: 3000,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 1000,
-    //           maxQuantity: 3000
-    //         },
-    //         {
-    //           type: RewardEnum.GOLD_TICKET,
-    //           minQuantity: 7,
-    //           maxQuantity: 15
-    //         },
-    //         {
-    //           type: RewardEnum.GIFT,
-    //           minQuantity: 2,
-    //           maxQuantity: 3
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '12',
-    //       type: TaskTypeEnum.WEEK,
-    //       description: `Đăng bài tại channel feeds`,
-    //       action: ActionEnum.POST_BLOG,
-    //       placeChannel: '1164592748758839306',
-    //       minCompletionCriteria: 5,
-    //       maxCompletionCriteria: 10,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 1000,
-    //           maxQuantity: 3000
-    //         },
-    //         {
-    //           type: RewardEnum.GOLD_TICKET,
-    //           minQuantity: 7,
-    //           maxQuantity: 15
-    //         },
-    //         {
-    //           type: RewardEnum.GIFT,
-    //           minQuantity: 2,
-    //           maxQuantity: 3
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '13',
-    //       type: TaskTypeEnum.WEEK,
-    //       description: `Bình luận bài post`,
-    //       action: ActionEnum.REPLY_POST_BLOG,
-    //       placeChannel: '1164592748758839306',
-    //       minCompletionCriteria: 80,
-    //       maxCompletionCriteria: 170,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 1000,
-    //           maxQuantity: 3000
-    //         },
-    //         {
-    //           type: RewardEnum.GOLD_TICKET,
-    //           minQuantity: 7,
-    //           maxQuantity: 15
-    //         },
-    //         {
-    //           type: RewardEnum.GIFT,
-    //           minQuantity: 2,
-    //           maxQuantity: 3
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '14',
-    //       type: TaskTypeEnum.WEEK,
-    //       description: `Đăng bài tại channel confession`,
-    //       action: ActionEnum.POST_CONFESSION,
-    //       placeChannel: '1158851593802887229',
-    //       minCompletionCriteria: 5,
-    //       maxCompletionCriteria: 10,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 1000,
-    //           maxQuantity: 3000
-    //         },
-    //         {
-    //           type: RewardEnum.GOLD_TICKET,
-    //           minQuantity: 7,
-    //           maxQuantity: 15
-    //         },
-    //         {
-    //           type: RewardEnum.GIFT,
-    //           minQuantity: 2,
-    //           maxQuantity: 3
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '15',
-    //       type: TaskTypeEnum.WEEK,
-    //       description: `Trả lời confession`,
-    //       action: ActionEnum.REPLY_CONFESSION,
-    //       placeChannel: '1158851593802887229',
-    //       minCompletionCriteria: 80,
-    //       maxCompletionCriteria: 170,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 1000,
-    //           maxQuantity: 3000
-    //         },
-    //         {
-    //           type: RewardEnum.GOLD_TICKET,
-    //           minQuantity: 7,
-    //           maxQuantity: 15
-    //         },
-    //         {
-    //           type: RewardEnum.GIFT,
-    //           minQuantity: 2,
-    //           maxQuantity: 3
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '16',
-    //       type: TaskTypeEnum.WEEK,
-    //       description: `Tặng quà cho một người bất kỳ`,
-    //       action: ActionEnum.GIFT,
-    //       placeChannel: '',
-    //       minCompletionCriteria: 3,
-    //       maxCompletionCriteria: 5,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 1000,
-    //           maxQuantity: 6000
-    //         },
-    //         {
-    //           type: RewardEnum.GOLD_TICKET,
-    //           minQuantity: 7,
-    //           maxQuantity: 15
-    //         },
-    //         {
-    //           type: RewardEnum.GIFT,
-    //           minQuantity: 2,
-    //           maxQuantity: 3
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       id: '17',
-    //       type: TaskTypeEnum.WEEK,
-    //       description: `Treo voice`,
-    //       action: ActionEnum.VOICE,
-    //       placeChannel: '',
-    //       minCompletionCriteria: 36,
-    //       maxCompletionCriteria: 72,
-    //       rewards: [
-    //         {
-    //           type: RewardEnum.SILVER_TICKET,
-    //           minQuantity: 1000,
-    //           maxQuantity: 3000
-    //         },
-    //         {
-    //           type: RewardEnum.GOLD_TICKET,
-    //           minQuantity: 7,
-    //           maxQuantity: 15
-    //         },
-    //         {
-    //           type: RewardEnum.GIFT,
-    //           minQuantity: 2,
-    //           maxQuantity: 3
-    //         }
-    //       ]
-    //     }
-    //   ];
+    if (existingQuest.length === 0) {
+      const defaultQuest = [
+        {
+          id: '1',
+          type: TaskTypeEnum.DAILY,
+          description: `Nhắn tin bất kỳ channel`,
+          action: ActionEnum.MESSAGE,
+          placeChannel: '',
+          minCompletionCriteria: 400,
+          maxCompletionCriteria: 600,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 200,
+              maxQuantity: 600
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        { 
+          id: '2',
+          type: TaskTypeEnum.DAILY,
+          description: `Nhắn tin tại channel`,
+          action: ActionEnum.MESSAGE,
+          placeChannel: '1142667605761605753',
+          minCompletionCriteria: 200,
+          maxCompletionCriteria: 400,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 200,
+              maxQuantity: 600
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        {
+          id: '3',
+          type: TaskTypeEnum.DAILY,
+          description: `Đăng bài tại channel feeds`,
+          action: ActionEnum.POST_BLOG,
+          placeChannel: '1164592748758839306',
+          minCompletionCriteria: 5,
+          maxCompletionCriteria: 12,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 200,
+              maxQuantity: 600
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        {
+          id: '4',
+          type: TaskTypeEnum.DAILY,
+          description: ` Bình luận bài post`,
+          action: ActionEnum.REPLY_POST_BLOG,
+          placeChannel: '1164592748758839306',
+          minCompletionCriteria: 6,
+          maxCompletionCriteria: 13,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 200,
+              maxQuantity: 600
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        {
+          id: '5',
+          type: TaskTypeEnum.DAILY,
+          description: `Đăng bài tại channel confession`,
+          action: ActionEnum.POST_CONFESSION,
+          placeChannel: '1158851593802887229',
+          minCompletionCriteria: 1,
+          maxCompletionCriteria: 3,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 200,
+              maxQuantity: 600
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        {
+          id: '6',
+          type: TaskTypeEnum.DAILY,
+          description: `Trả lời confession`,
+          action: ActionEnum.REPLY_CONFESSION,
+          placeChannel: '1158851593802887229',
+          minCompletionCriteria: 3,
+          maxCompletionCriteria: 7,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 200,
+              maxQuantity: 600
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        {
+          id: '7',
+          type: TaskTypeEnum.DAILY,
+          description: `Tặng quà cho một người bất kỳ`,
+          action: ActionEnum.GIFT,
+          placeChannel: '',
+          minCompletionCriteria: 1,
+          maxCompletionCriteria: 2,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 200,
+              maxQuantity: 800
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        {
+          id: '8',
+          type: TaskTypeEnum.DAILY,
+          description: `Boost Server 1 lần`,
+          action: ActionEnum.BOOST_SERVER,
+          placeChannel: '',
+          minCompletionCriteria: 1,
+          maxCompletionCriteria: 1,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 400,
+              maxQuantity: 1000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        {
+          id: '9',
+          type: TaskTypeEnum.DAILY,
+          description: `Treo voice`,
+          action: ActionEnum.VOICE,
+          placeChannel: '',
+          minCompletionCriteria: 2,
+          maxCompletionCriteria: 9,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 200,
+              maxQuantity: 600
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        {
+          id: '18',
+          type: TaskTypeEnum.DAILY,
+          description: `Trồng cây`,
+          action: ActionEnum.FARM,
+          placeChannel: '',
+          minCompletionCriteria: 2,
+          maxCompletionCriteria: 9,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 200,
+              maxQuantity: 600
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+        // week task
+        {
+          id: '10',
+          type: TaskTypeEnum.WEEK,
+          description: `Nhắn tin bất kỳ channel`,
+          action: ActionEnum.MESSAGE,
+          placeChannel: '',
+          minCompletionCriteria: 1000,
+          maxCompletionCriteria: 3000,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 1000,
+              maxQuantity: 3000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
+            },
+            {
+              type: RewardEnum.GIFT,
+              minQuantity: 2,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 3
+            }
+          ]
+        },
+        {
+          id: '11',
+          type: TaskTypeEnum.WEEK,
+          description: `Nhắn tin tại channel`,
+          action: ActionEnum.MESSAGE,
+          placeChannel: '1142667605761605753',
+          minCompletionCriteria: 1000,
+          maxCompletionCriteria: 3000,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 1000,
+              maxQuantity: 3000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
+            },
+            {
+              type: RewardEnum.GIFT,
+              minQuantity: 2,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 3
+            }
+          ]
+        },
+        {
+          id: '12',
+          type: TaskTypeEnum.WEEK,
+          description: `Đăng bài tại channel feeds`,
+          action: ActionEnum.POST_BLOG,
+          placeChannel: '1164592748758839306',
+          minCompletionCriteria: 5,
+          maxCompletionCriteria: 10,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 1000,
+              maxQuantity: 3000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
+            },
+            {
+              type: RewardEnum.GIFT,
+              minQuantity: 2,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 3
+            }
+          ]
+        },
+        {
+          id: '13',
+          type: TaskTypeEnum.WEEK,
+          description: `Bình luận bài post`,
+          action: ActionEnum.REPLY_POST_BLOG,
+          placeChannel: '1164592748758839306',
+          minCompletionCriteria: 80,
+          maxCompletionCriteria: 170,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 1000,
+              maxQuantity: 3000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
+            },
+            {
+              type: RewardEnum.GIFT,
+              minQuantity: 2,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 3
+            }
+          ]
+        },
+        {
+          id: '14',
+          type: TaskTypeEnum.WEEK,
+          description: `Đăng bài tại channel confession`,
+          action: ActionEnum.POST_CONFESSION,
+          placeChannel: '1158851593802887229',
+          minCompletionCriteria: 5,
+          maxCompletionCriteria: 10,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 1000,
+              maxQuantity: 3000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
+            },
+            {
+              type: RewardEnum.GIFT,
+              minQuantity: 2,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 3
+            }
+          ]
+        },
+        {
+          id: '15',
+          type: TaskTypeEnum.WEEK,
+          description: `Trả lời confession`,
+          action: ActionEnum.REPLY_CONFESSION,
+          placeChannel: '1158851593802887229',
+          minCompletionCriteria: 80,
+          maxCompletionCriteria: 170,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 1000,
+              maxQuantity: 3000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
+            },
+            {
+              type: RewardEnum.GIFT,
+              minQuantity: 2,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 3
+            }
+          ]
+        },
+        {
+          id: '16',
+          type: TaskTypeEnum.WEEK,
+          description: `Tặng quà cho một người bất kỳ`,
+          action: ActionEnum.GIFT,
+          placeChannel: '',
+          minCompletionCriteria: 3,
+          maxCompletionCriteria: 5,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 1000,
+              maxQuantity: 6000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
+            },
+            {
+              type: RewardEnum.GIFT,
+              minQuantity: 2,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 3
+            }
+          ]
+        },
+        {
+          id: '17',
+          type: TaskTypeEnum.WEEK,
+          description: `Treo voice`,
+          action: ActionEnum.VOICE,
+          placeChannel: '',
+          minCompletionCriteria: 36,
+          maxCompletionCriteria: 72,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 1000,
+              maxQuantity: 3000
+            },
+            {
+              type: RewardEnum.GOLD_TICKET,
+              minQuantity: 7,
+              maxQuantity: 15
+            },
+            {
+              type: RewardEnum.GIFT,
+              minQuantity: 2,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 3
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 3
+            }
+          ]
+        },
+        {
+          id: '19',
+          type: TaskTypeEnum.WEEK,
+          description: `Trồng cây`,
+          action: ActionEnum.FARM,
+          placeChannel: '',
+          minCompletionCriteria: 20,
+          maxCompletionCriteria: 40,
+          rewards: [
+            {
+              type: RewardEnum.SILVER_TICKET,
+              minQuantity: 1000,
+              maxQuantity: 3000
+            },
+            {
+              type: RewardEnum.SEED,
+              minQuantity: 1,
+              maxQuantity: 1
+            },
+            {
+              type: RewardEnum.FARM_ITEM,
+              minQuantity: 1,
+              maxQuantity: 1
+            }
+          ]
+        },
+      ];
 
-    //   await questModel.insertMany(defaultQuest);
-    //   console.log('Default quests inserted successfully.');
+      await questModel.insertMany(defaultQuest);
+      console.log('Default quests inserted successfully.');
 
-    // }
+    }
 
     // const users = await userModel.find();
     // users.forEach(user => {
@@ -649,8 +871,18 @@ const initializeDatabase = async () => {
     //   await intimacyShopModel.insertMany(imShop);
     //   console.log('Default im shop inserted successfully.');
     // }
+
+    // const data = await userModel.find(); 
+    // for(const user of data) {
+    //   if (user.tickets.silver > 1) {
+    //     user.tickets.silver += 4000;
+    //     await UserService.updateUser(user);
+    //     console.log('Updated', user.username, user.tickets.silver)
+    //   }
+    // }
+    
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.log('Database initialization error:', error);
   } finally {
     mongoose.connection.close();
   }

@@ -32,7 +32,22 @@ const renderQuest = (quests) => {
 const renderReward = (rewards) => {
   let result = '';
   rewards.forEach((reward, index) => {
-    result += '``' + `${reward.rewardType === RewardEnum.GIFT || reward.rewardType === RewardEnum.QUEST_RESET ? 'x' : ''}${reward.quantity}` + '``' + `${reward.rewardType === RewardEnum.SILVER_TICKET ? emoji.silverTicket : reward.rewardType === RewardEnum.GOLD_TICKET ? emoji.goldenTicket : `${reward.giftEmoji}${reward.name}`}${index !== rewards.length - 1 ? ', ' : ''}`;
+    let quantity = reward.quantity;
+    let name = emoji.silverTicket;
+
+    if (reward.rewardType !== RewardEnum.SILVER_TICKET && reward.rewardType !== RewardEnum.GOLD_TICKET) {
+      quantity = `x${quantity}`;
+    }
+    if (reward.rewardType === RewardEnum.GOLD_TICKET) {
+      name = emoji.goldenTicket;
+    } else if (reward.rewardType === RewardEnum.GIFT || reward.rewardType === RewardEnum.QUEST_RESET) {
+      name = `${reward.giftEmoji}${reward.name}`;
+    } else if (reward.rewardType === RewardEnum.SEED) {
+      name = `${reward.seedInfo.seedEmoji}${reward.seedInfo.name}`;
+    } else if (reward.rewardType === RewardEnum.FARM_ITEM) {
+      name = `${reward.farmItemInfo.emoji}${reward.farmItemInfo.name}`;
+    }
+    result += '``' + `${quantity}` + '``' + `${name}${index !== rewards.length - 1 ? ', ' : ''}`;
   });
   return result;
 }
@@ -78,7 +93,7 @@ const ranking = (rankings) => {
   for(let rank of rankings) {
     if (index > 20) break;
     if (rank.quantity > 0) {
-      render +=  '``Top '+ index +'``' + `<@${rank.discordUserId}>: ${rank.quantity} ${rank.type === RewardEnum.SILVER_TICKET ? emoji.silverTicket : rank.type === 'completedQuest' ? 'nhiệm vụ' : emoji.goldenTicket }\n`
+      render +=  '``Top '+ index +'``' + `<@${rank.discordUserId}>: ${rank.quantity} ${rank.type === RewardEnum.SILVER_TICKET ? emoji.silverTicket : rank.type === 'completedQuest' ? 'nhiệm vụ' : rank.type === 'farm' ? 'điểm' : emoji.goldenTicket }\n`
       index++;
     }
   }
@@ -157,7 +172,7 @@ const createUserMessage = (type, body = {}) => {
         name: `Bảng nhiệm vụ ${body.questType === 'week' ? 'tuần' : 'ngày'}`,
         iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
       })
-      .setDescription(`${emoji.blank}${emoji.redDot} Tổng nhiệm vụ đã hoàn thành: ${body.totalQuestCompleted}\n${emoji.blank}${emoji.redDot} Ticket hằng ngày: ${body.totalTicketClaimDaily}/${body.maxTicket}\n ${body.questType === 'daily' ? `${emoji.blank}${emoji.redDot} Cấp độ nhiệm vụ: ${body.level}\n${emoji.blank}${emoji.redDot} Số nhiệm vụ được nhận: ${body.questQuantity}\n\n${emoji.ruby}Nâng cấp độ để tăng được nhiều nhiệm vụ và giới hạn ticket được nhận hằng ngày\n` : ''} ─────────────────────────\n📖 Nhiệm vụ hôm nay\n${emoji.blank}${emoji.redDot}Làm mới sau ${body.endTime}\n\n` + renderQuest(body.quests) + `${body.questType !== 'week' ? `${emoji.ruby} <:leu_scroll38:1158500980242010122>Vé làm mới: x${body.resetQuantity}\n` : ''}` + '``⚠️  Lưu ý: Nên nhận thưởng trước thời gian làm mới.``')
+      .setDescription(`${emoji.blank}${emoji.redDot} Tổng nhiệm vụ đã hoàn thành: ${body.totalQuestCompleted}\n${emoji.blank}${emoji.redDot} Ticket hằng ngày: ${body.totalTicketClaimDaily}/${body.maxTicket}\n ${body.questType === 'daily' ? `${emoji.blank}${emoji.redDot} Cấp độ nhiệm vụ: ${body.level}\n${emoji.blank}${emoji.redDot} Số nhiệm vụ được nhận: ${body.questQuantity}\n\n${emoji.ruby}Nâng cấp độ để tăng được nhiều nhiệm vụ và giới hạn ticket được nhận hằng ngày\n` : ''} ─────────────────────────\n📖 Nhiệm vụ ${body.questType === 'week' ? 'tuần này' : 'hôm nay'}\n${emoji.blank}${emoji.redDot}Làm mới sau ${body.endTime}\n\n` + renderQuest(body.quests) + `${body.questType !== 'week' ? `${emoji.ruby} ${emoji.paper}Vé làm mới: x${body.resetQuantity}\n` : ''}` + '``⚠️  Lưu ý: Nên nhận thưởng trước thời gian làm mới.``')
       .setThumbnail(levelImage[body.level])
       .setColor(0xe59b9b)
       .setFooter({ 

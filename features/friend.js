@@ -10,6 +10,7 @@ const { calcDate, handleEmoji, mergeImages, convertDateTime } = require("../util
 const { ActionEnum } = require("../models/quest.model");
 const { BagItemType } = require("../models/user.model");
 const { relationshipType } = require("../models/relationship.model");
+const { QuestService } = require("../services/quest.service");
 process.env.TZ = 'Asia/Bangkok';
 
 const addFriend = {
@@ -141,7 +142,7 @@ const addFriend = {
             embeds: [createNormalMessage(messages.addFriendError)]
           })
         } catch (error) {
-          console.log(error);
+          console.log(error, '[request accept or reject friend]');
         }
       })
 
@@ -171,7 +172,6 @@ const removeFriend = {
         await interaction.followUp({ embeds: [createNormalMessage(messages.removeFriendForMySelf)] });
         return;
       }
-
 
       if (!userReceived || !userReceived.discordUserId) {
         await interaction.followUp({ embeds: [createNormalMessage(messages.addFriendUnreadyRegister(target.id))] });
@@ -268,7 +268,7 @@ const removeFriend = {
             components: []
           });
         } catch (error) {
-          console.log(error);          
+          console.log(error, '[remove friend confirm]');          
         }
       });
     } catch (error) {
@@ -380,7 +380,7 @@ const relationship = {
               components: []
             });
           } catch (error) {
-            console.log(error);
+            console.log(error, '[buy slot friend]');
           }
         })
         
@@ -684,7 +684,7 @@ const relationship = {
                   return;
                 }
               } catch (error) {
-                console.log(error);
+                console.log(error, '[accept marry]');
               }
             })
             return;
@@ -820,7 +820,7 @@ const relationship = {
           }
 
         } catch (error) {
-          console.log(error);
+          console.log(error, '[marry, craft]');
         }
       });
 
@@ -933,18 +933,16 @@ const gift = {
             user.giftsGiven[findItemOnGifted].quantity += 1;
           }
   
-          const questToUpdateIndex = user.quests.dailyQuestsReceived.quests.findIndex(quest => quest.action === ActionEnum.GIFT);
+          const questToUpdate = user.quests.dailyQuestsReceived.quests.find(quest => quest.action === ActionEnum.GIFT);
       
-          if (questToUpdateIndex !== -1 && 
-            user.quests.dailyQuestsReceived.quests[questToUpdateIndex].progress < user.quests.dailyQuestsReceived.quests[questToUpdateIndex].completionCriteria) {
-            user.quests.dailyQuestsReceived.quests[questToUpdateIndex].progress += 1;
+          if (questToUpdate) {
+            await QuestService.updateProgressQuest(questToUpdate._id, '');
           }
       
-          const questToWeekUpdateIndex = user.quests.weekQuestsReceived.quests.findIndex(quest => quest.action === ActionEnum.GIFT);
+          const questToWeekUpdate = user.quests.weekQuestsReceived.quests.find(quest => quest.action === ActionEnum.GIFT);
       
-          if (questToWeekUpdateIndex !== -1 && 
-            user.quests.weekQuestsReceived.quests[questToWeekUpdateIndex].progress < user.quests.weekQuestsReceived.quests[questToWeekUpdateIndex].completionCriteria) {
-            user.quests.weekQuestsReceived.quests[questToWeekUpdateIndex].progress += 1;
+          if (questToWeekUpdate) {
+            await QuestService.updateProgressQuest(questToWeekUpdate._id, '');
           }
   
           await UserService.updateUser(user);
@@ -963,7 +961,7 @@ const gift = {
             components: []
           })
         } catch (error) {
-          console.log(error);
+          console.log(error, '[choose gift]');
         }
       })
 

@@ -5,9 +5,9 @@ const { createNormalMessage } = require("../messages/normalMessage");
 const messages = require("../constants/messages");
 const connectDB = require("../DB/connection");
 const { createShopMessage } = require("../messages/shopMessage");
-const { shopActionType, purchaseQuantity, currency, emoji } = require("../constants/general");
-const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ActionRowBuilder, SelectMenuBuilder } = require("@discordjs/builders");
-const { ButtonStyle, ComponentType, ChannelType } = require("discord.js");
+const { shopActionType, purchaseQuantity, currency, emoji, purchaseFarmQuantity } = require("../constants/general");
+const { StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ActionRowBuilder, SelectMenuBuilder, TextInputBuilder, ModalBuilder } = require("@discordjs/builders");
+const { ButtonStyle, ComponentType, ChannelType, TextInputStyle } = require("discord.js");
 const { cloneDeep, handleEmoji, randomBetweenTwoNumber, randomGiftReward } = require("../utils");
 const { RoleService } = require("../services/role.service");
 const { GiftService } = require("../services/gift.service");
@@ -18,6 +18,8 @@ const { FriendService } = require("../services/friend.service");
 const { TreasureItemType } = require("../models/treasureBox.model");
 const { default: mongoose } = require("mongoose");
 const { BagItemType } = require("../models/user.model");
+const { farmShopType } = require("../models/farmShop.model");
+const { seedType } = require("../models/seed.model");
 connectDB();
 
 const purchaseGiftBtn = () => {
@@ -141,6 +143,42 @@ const purchaseIntimacyBtn = () => {
   return { rowPurchase };
 }
 
+const purchaseFarmItemBtn = () => {
+  const silverTicket = {
+    id: '1168509616938815650',
+    name: 'leu_ticket'
+  };
+
+  const customPurchase = new ButtonBuilder()
+  .setCustomId('customPurchase')
+  .setLabel('Tùy chọn số lượng')
+  .setStyle(ButtonStyle.Primary);
+  
+  const buyOneSilver = new ButtonBuilder()
+    .setCustomId('buyOneFarm')
+    .setLabel('Mua x1')
+    .setStyle(ButtonStyle.Primary).setEmoji(silverTicket);
+
+  const buyFiveSilver = new ButtonBuilder()
+    .setCustomId('buyFiveFarm')
+    .setLabel('Mua x5')
+    .setStyle(ButtonStyle.Primary).setEmoji(silverTicket);
+
+  const buyTenSilver = new ButtonBuilder()
+    .setCustomId('buyTenFarm')
+    .setLabel('Mua x10')
+    .setStyle(ButtonStyle.Primary).setEmoji(silverTicket);
+
+  const buyFiftySilver = new ButtonBuilder()
+    .setCustomId('buyFiftyFarm')
+    .setLabel('Mua x50')
+    .setStyle(ButtonStyle.Primary).setEmoji(silverTicket);
+
+  const rowPurchaseSilver = new ActionRowBuilder().addComponents([buyOneSilver, buyFiveSilver, buyTenSilver, buyFiftySilver, customPurchase]);
+  
+  return { rowPurchaseSilver };
+}
+
 let shopChosen = null;
 
 const giftShop = async (interaction, reply, gifts, beforeSelect, user) => {
@@ -185,7 +223,7 @@ const giftShop = async (interaction, reply, gifts, beforeSelect, user) => {
         components: [rowPurchaseSilver, rowPurchaseGold, rowBeforeSelect]
       });
     } catch (error) {
-      console.log(error);
+      console.log(error, '[choose gift shop]');
     }
   });
 }
@@ -233,7 +271,7 @@ const roleShop = async (interaction, reply, roles, beforeSelect, user) => {
         components: [rowPurchase, rowBeforeSelect]
       });
     } catch (error) {
-      console.log(error);
+      console.log(error, '[get detail role]');
     }
   });
 }
@@ -281,7 +319,7 @@ const questShop = async (interaction, reply, questItems, beforeSelect, user) => 
         components: [rowPurchase, rowBeforeSelect]
       });
     } catch (error) {
-      console.log(error);
+      console.log(error, '[get detail gift]');
     }
   });
 }
@@ -328,13 +366,13 @@ const chooseFriend = async(interaction, reply, intimacyItem, beforeSelect, user)
         if (!friend || !friend.discordUserId) return;
         intimacyPointsShop(interaction, reply, intimacyItem, beforeSelect, newUserData, friend);
       } catch (error) {
-        console.log(error);
+        console.log(error, '[choose choose friend]');
       }
     });
 
     
   } catch (error) {
-    console.log(error);
+    console.log(error, '[chooseFriend]');
   }
 }
 
@@ -391,7 +429,7 @@ const intimacyPointsShop = async (interaction, reply, intimacyItem, beforeSelect
         components: [rowPurchase, rowBeforeSelect]
       });
     } catch (error) {
-      console.log(error);
+      console.log(error, '[choose item imshop]');
     }
   });
 
@@ -406,7 +444,7 @@ const intimacyPointsShop = async (interaction, reply, intimacyItem, beforeSelect
       await interaction.deferUpdate();
       progressIntimacyShop(interaction, reply, intimacyItem, beforeSelect, user, friend, shopChosen);
     } catch (error) {
-      console.log(error);
+      console.log(error, '[progress purchase imshop]');
     }
   })
 
@@ -423,9 +461,440 @@ const intimacyPointsShop = async (interaction, reply, intimacyItem, beforeSelect
         embeds: [createShopMessage( shopActionType.guideIntimacyShop)],
       })
     } catch (error) {
-      console.log(error);
+      console.log(error, '[guid imshop]');
     }
   })
+}
+
+
+const seedShopSelection = async (seeds, type) => {
+  const select = new StringSelectMenuBuilder()
+    .setCustomId('seedShopChoose')
+    .setPlaceholder(`Chọn loại ${type === 'seedShop' ? 'hạt giống' : 'vật nuôi'}`)
+  for(const seed of seeds) {
+    select.addOptions(
+      new StringSelectMenuOptionBuilder()
+        .setLabel(seed.seedInfo.name)
+        .setValue(String(seed.seedInfo._id))
+        .setEmoji(handleEmoji(seed.seedInfo.seedEmoji))
+    )
+  }
+
+  return new ActionRowBuilder().addComponents(select);
+}
+
+const farmItemSelection = async (items) => {
+  const select = new StringSelectMenuBuilder().setCustomId('farmItemShopChoose').setPlaceholder('Chọn loại vật phẩm')
+  for(const item of items) {
+    select.addOptions(
+      new StringSelectMenuOptionBuilder()
+        .setLabel(item.farmItemInfo.name)
+        .setDescription(item.farmItemInfo.description)
+        .setValue(String(item.farmItemInfo._id))
+        .setEmoji(handleEmoji(item.farmItemInfo.emoji))
+    )
+  }
+
+  return new ActionRowBuilder().addComponents(select);
+}
+
+const progressFarmPurchase = async (rowSelect, reply, user, shopChosen, quantity) => {
+  try {
+    if (!shopChosen || !shopChosen.priceSilver) {
+      await reply.edit({
+        embeds: [createNormalMessage(`Lỗi không thể thanh toán.`)],
+        components: []
+      });
+      listShopType = [];
+      return;
+    }
+    const price = (shopChosen.priceSilver * quantity);
+    const total = Math.floor(price + (price * 10) / 100);
+    const backToFarmShop = new ButtonBuilder()
+      .setCustomId('backToFarmShop')
+      .setLabel('Quay lại')
+      .setStyle(ButtonStyle.Primary).setEmoji({
+        id: '1174295696522874890',
+        name: 'back_to_board',
+        animated: true
+      });
+    
+    const backToFarmShopArrow = new ActionRowBuilder().addComponents(backToFarmShop);
+  
+    if (user.tickets.silver < total) {
+      await reply.edit({
+        embeds: [createNormalMessage(`Số vé của bạn không đủ để mua x${quantity} ${shopChosen.type === farmShopType.seed ? `${shopChosen.seedInfo.seedEmoji}${shopChosen.seedInfo.name}` : `${shopChosen.farmItemInfo.emoji}${shopChosen.farmItemInfo.name}`}. Tổng tiền là ${total} ${emoji.silverTicket}`)],
+        components: [rowSelect]
+      });
+      return
+    }
+  
+    user.tickets.silver -= total;
+  
+    if (shopChosen.type === farmShopType.seed) {
+      const checkItemExist = user.itemBag.findIndex(item => item._id.equals(shopChosen.seedInfo._id))
+  
+      if (checkItemExist === -1) {
+        const itemToAdd = {
+          _id: shopChosen.seedInfo._id,
+          name: shopChosen.seedInfo.name,
+          description: shopChosen.seedInfo.description,
+          type: shopChosen.type,
+          seedInfo: shopChosen.seedInfo,
+          quantity
+        }
+        user.itemBag.push(itemToAdd);
+      } else {
+        user.itemBag[checkItemExist].quantity += quantity;
+      }
+    } else {
+      const checkItemExist = user.itemBag.findIndex(item => item._id.equals(shopChosen.farmItemInfo._id))
+  
+      if (checkItemExist === -1) {
+        const itemToAdd = {
+          _id: shopChosen.farmItemInfo._id,
+          name: shopChosen.farmItemInfo.name,
+          description: shopChosen.farmItemInfo.description,
+          type: shopChosen.type,
+          farmItemInfo: shopChosen.farmItemInfo,
+          quantity
+        }
+        user.itemBag.push(itemToAdd);
+      } else {
+        user.itemBag[checkItemExist].quantity += quantity;
+      }
+    }
+  
+    await UserService.updateUser(user);
+
+    listShopType = [];
+  
+    await reply.edit({
+      embeds: [createShopMessage(shopActionType.purchasedFarmItem, { 
+        data: shopChosen, 
+        quantity, 
+        total, 
+        silver: user.tickets.silver, 
+        gold: user.tickets.gold 
+      })],
+      components: [backToFarmShopArrow]
+    });
+    
+  } catch (error) {
+    console.log(error, '[progressFarmPurchase]');
+  }
+}
+
+let listShopType = [];
+
+const filterSeeds = async () => {
+  try {
+    const itemsShop = await ShopService.getFarmShop();
+    const plantSeeds = itemsShop.filter(item => item.type === farmShopType.seed && item.seedInfo.type === seedType.plant);
+  
+    const liveStockSeeds = itemsShop.filter(
+      item => item.type === farmShopType.seed && 
+      (item.seedInfo.type === seedType.livestock)
+    );
+
+    const fishSeeds = itemsShop.filter(
+      item => item.type === farmShopType.seed && item.seedInfo.type === seedType.fish);
+    
+    const farmItems = itemsShop.filter(item => item.type === farmShopType.farmItem);
+
+    return { itemsShop, plantSeeds, liveStockSeeds, farmItems, fishSeeds };
+  } catch (error) {
+    console.log(error, 'filterSeeds');
+  }
+}
+
+const actionChooseFarmShop = async (reply, interaction, userId) => {
+  try {
+    const farmShopCollection = await reply.createMessageComponentCollector({
+      componentType: ComponentType.StringSelect,
+      filter: (i) => i.user.id === interaction.user.id && i.customId === 'farmShopChoose',
+      time: 300000
+    });
+  
+    farmShopCollection.on('collect', async (interaction) => {
+      try {
+        await interaction.deferUpdate();
+        const [value] = interaction.values;
+        const user = await UserService.getUserById(userId);
+
+        const { plantSeeds, liveStockSeeds, farmItems, fishSeeds } = await filterSeeds();
+
+        const rowSelect = renderFarmShopSelect();
+
+        if (value === 'seedShop') {
+          const { pagesArrow } = paginationBtn();
+          listShopType = plantSeeds.slice(0, 10);
+          const rowSeedSelect = await seedShopSelection(plantSeeds.slice(0, 10), value);
+          await reply.edit({
+            embeds: [createShopMessage(shopActionType.getFarmItem, { data: plantSeeds.slice(0, 10), silver: user.tickets.silver, gold: user.tickets.gold })],
+            components: [pagesArrow, rowSeedSelect, rowSelect]
+          });
+          return;
+        }
+
+        if (value === 'liveStockShop') {
+          listShopType = [...liveStockSeeds, ...fishSeeds];
+          const rowSeedSelect = await seedShopSelection([...liveStockSeeds, ...fishSeeds]);
+          await reply.edit({
+            embeds: [createShopMessage(shopActionType.getLiveStockSeed, { liveStockSeeds, fishSeeds, silver: user.tickets.silver, gold: user.tickets.gold })],
+            components: [rowSeedSelect, rowSelect]
+          });
+          return;
+        }
+
+        listShopType = farmItems;
+        const rowSeedSelect = await farmItemSelection(farmItems);
+        await reply.edit({
+          embeds: [createShopMessage(shopActionType.getFarmItem, { data: farmItems, silver: user.tickets.silver, gold: user.tickets.gold })],
+          components: [rowSeedSelect, rowSelect]
+        });
+  
+      } catch (error) {
+        console.log(error, '[get seed shop]');
+      }
+    });
+  } catch (error) {
+    
+  }
+}
+
+const paginationBtn = () => {
+  const prev = new ButtonBuilder()
+    .setCustomId('prevPlant')
+    .setLabel('Trang trước')
+    .setStyle(ButtonStyle.Primary).setEmoji({
+      id: '1174295696522874890',
+      name: 'back_to_board',
+      animated: true
+    }).setDisabled(true);
+
+  const next = new ButtonBuilder()
+    .setCustomId('nextPlant')
+    .setLabel('Trang sau')
+    .setStyle(ButtonStyle.Primary).setEmoji({
+      id: '1176098056656142366',
+      name: 'right',
+      animated: true
+    });
+
+  const pagesArrow = new ActionRowBuilder().addComponents([prev, next]);
+  return { pagesArrow, next, prev };
+}
+
+const modalQuantityFarm = async (rowSelect, reply, user, shopChosen, interaction) =>{
+  try {
+    const modal = new ModalBuilder()
+      .setCustomId('customQuantityFarm')
+      .setTitle(`Nhập số lượng muốn mua`);
+
+      const input = new TextInputBuilder()
+      .setCustomId(`quantity`)
+      .setLabel(`Số lượng`)
+      .setPlaceholder('Số lượng')
+      .setMaxLength(10)
+      .setRequired(true)
+      .setStyle(TextInputStyle.Short);
+  
+      const firstActionRow = new ActionRowBuilder().addComponents(input);
+      
+      modal.addComponents(firstActionRow);
+      await interaction.showModal(modal);
+          
+      const submitted = await interaction.awaitModalSubmit({
+        time: 300000,
+        filter: i => i.user.id === interaction.user.id,
+      }).catch(error => {
+        console.error(error, '[modal submit]')
+        return null;
+      });
+
+      if (submitted) {
+        await submitted.deferUpdate();
+        const quantityInput = submitted.fields.getTextInputValue('quantity');
+        const quantity = purchaseFarmQuantity.custom(quantityInput);
+        if (isNaN(quantity)) return;
+        progressFarmPurchase(rowSelect, reply, user, shopChosen, quantity);
+      }
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+const actionPagination = async (reply, interaction, userId) => {
+  try {
+    const pageCollection = await reply.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      filter: (i) => i.user.id === interaction.user.id && 
+      (
+        i.customId === 'prevPlant' || 
+        i.customId === 'nextPlant' || 
+        i.customId === 'buyOneFarm' || 
+        i.customId === 'buyFiveFarm' || 
+        i.customId === 'buyTenFarm' || 
+        i.customId === 'buyFiftyFarm' || 
+        i.customId === 'backToFarmShop' ||
+        i.customId === 'customPurchase'
+      ),
+      time: 300000
+    });
+  
+    pageCollection.on('collect', async (interaction) => {
+      try {
+        const customId = interaction.customId;
+        const user = await UserService.getUserById(userId);
+        const { pagesArrow, next, prev } = paginationBtn();
+        const rowSelect = renderFarmShopSelect();
+
+        if (customId === 'prevPlant') {
+          await interaction.deferUpdate();
+          const { plantSeeds } = await filterSeeds();
+          next.setDisabled(false);
+          prev.setDisabled(true);
+          const rowSeedSelect = await seedShopSelection(plantSeeds.slice(0, 10));
+          listShopType = plantSeeds.slice(0, 10);
+          await reply.edit({
+            embeds: [createShopMessage(shopActionType.getFarmItem, { data: plantSeeds.slice(0, 10), silver: user.tickets.silver, gold: user.tickets.gold })],
+            components: [pagesArrow, rowSeedSelect, rowSelect]
+          });
+          return;
+        }
+
+        if (customId === 'nextPlant') {
+          await interaction.deferUpdate();
+          const { plantSeeds } = await filterSeeds();
+          next.setDisabled(true);
+          prev.setDisabled(false);
+          const rowSeedSelect = await seedShopSelection(plantSeeds.slice(10));
+          listShopType = plantSeeds.slice(10);
+          await reply.edit({
+            embeds: [createShopMessage(shopActionType.getFarmItem, { data: plantSeeds.slice(10), silver: user.tickets.silver, gold: user.tickets.gold })],
+            components: [pagesArrow, rowSeedSelect, rowSelect]
+          });
+          return;
+        }
+
+        if (customId === 'backToFarmShop') {
+          await interaction.deferUpdate();
+          farmShop(reply);
+          return;
+        }
+
+        if (customId === 'customPurchase') {
+          modalQuantityFarm(rowSelect, reply, user, shopChosen, interaction);
+          return;
+        }
+
+        await interaction.deferUpdate();
+        const quantity = purchaseFarmQuantity[customId];
+        progressFarmPurchase(rowSelect, reply, user, shopChosen, quantity);
+      } catch (error) {
+        console.log(error, '[get seed shop next prev and progress purchase]');
+      }
+    })
+  } catch (error) {
+    
+  }
+}
+
+const actionFarmDetail = async (reply, interaction, userId) => {
+  try {
+    const seedChooseCollection = await reply.createMessageComponentCollector({
+      componentType: ComponentType.StringSelect,
+      filter: (i) => i.user.id === interaction.user.id && i.customId === 'seedShopChoose',
+      time: 300000
+    });
+  
+    seedChooseCollection.on('collect', async (interaction) => {
+      try {
+        await interaction.deferUpdate();
+        const [value] = interaction.values;
+        const seed = listShopType.find(seed => seed.seedInfo._id.equals(value));
+        const { rowPurchaseSilver } = purchaseFarmItemBtn();
+        const rowSelect = renderFarmShopSelect();
+        const user = await UserService.getUserById(userId);
+        shopChosen = seed;
+        const rowSeedSelect = await seedShopSelection(listShopType);
+        await reply.edit({
+          embeds: [createShopMessage(shopActionType.getFarmItemDetail, {data: seed, silver: user.tickets.silver, gold: user.tickets.gold })],
+          components: [rowPurchaseSilver, rowSeedSelect, rowSelect]
+        });
+      } catch (error) {
+        console.log(error, '[choose seed]');
+      }
+    })
+  } catch (error) {
+    
+  }
+}
+
+const actionItemFarmChoose = async (reply, interaction, userId) => {
+  try {
+    const itemChooseCollection = await reply.createMessageComponentCollector({
+      componentType: ComponentType.StringSelect,
+      filter: (i) => i.user.id === interaction.user.id && i.customId === 'farmItemShopChoose',
+      time: 300000
+    });
+  
+    itemChooseCollection.on('collect', async (interaction) => {
+      try {
+        await interaction.deferUpdate();
+        const [value] = interaction.values;
+        const item = listShopType.find(item => item.farmItemInfo._id.equals(value));
+        const { rowPurchaseSilver } = purchaseFarmItemBtn();
+        const rowSelect = renderFarmShopSelect();
+        shopChosen = item;
+        const rowSeedSelect = await farmItemSelection(listShopType);
+        const user = await UserService.getUserById(userId);
+        await reply.edit({
+          embeds: [createShopMessage(shopActionType.getFarmItemDetail, {data: item, silver: user.tickets.silver, gold: user.tickets.gold })],
+          components: [rowPurchaseSilver, rowSeedSelect, rowSelect]
+        });
+      } catch (error) {
+        console.log(error, '[choose farm item]');
+      }
+    })
+  } catch (error) {
+    
+  }
+}
+
+const renderFarmShopSelect = () => {
+  const select = new StringSelectMenuBuilder().setCustomId('farmShopChoose').setPlaceholder('Chọn loại cửa hàng')
+  .addOptions(
+    new StringSelectMenuOptionBuilder()
+      .setLabel('Cửa hàng cây trồng')
+      .setDescription('Bán các loại hạt giống')
+      .setValue('seedShop')
+  )
+  .addOptions(
+    new StringSelectMenuOptionBuilder()
+      .setLabel('Cửa hàng vật nuôi')
+      .setDescription('Bán các loại vật nuôi')
+      .setValue('liveStockShop')
+  )
+  .addOptions(
+    new StringSelectMenuOptionBuilder()
+      .setLabel('Cửa hàng vật phẩm')
+      .setDescription('Bán các vật phẩm như thức ăn, thuốc trị bệnh cho vật nuôi...')
+      .setValue('farmItemShop')
+  )
+  const rowSelect = new ActionRowBuilder().addComponents(select);
+  return rowSelect;
+}
+
+const farmShop = async (reply) => {
+  const embeds = createShopMessage(shopActionType.getFarmShop);
+  const rowSelect = renderFarmShopSelect();
+
+  await reply.edit({
+    embeds: [embeds],
+    components: [rowSelect]
+  });
 }
 
 const progressIntimacyShop = async (interaction, reply, intimacyItem, beforeSelect, user, friend, shopChosen) => {
@@ -731,11 +1200,11 @@ const progressIntimacyShop = async (interaction, reply, intimacyItem, beforeSele
           await logChannel.send(`[Purchase] ${user.username} và ${userFriend.username} đã mua x1 ${shopChosen.treasureBoxInfo.emoji} ${shopChosen.treasureBoxInfo.name} bằng ${shopChosen.intimacyPrice}${emoji.imPoint} và ${shopChosen.silverTicket}${emoji.silverTicket}.`);
         }
       } catch (error) {
-        console.log(error);
+        console.log(error, '[confirm purchase imshop]');
       }
     })
   } catch (error) {
-    console.log(error);
+    console.log(error, '[progressIntimacyShop]');
   }
 }
 
@@ -822,7 +1291,7 @@ const progressGiftPurchase = async (interaction, quantity, user, shopReply, type
       await logChannel.send(`[Purchase] ${user.username} đã mua x${value} ${shopChosen.giftInfo.giftEmoji} ${shopChosen.giftInfo.name} bằng ${total}${type === currency.silver ? emoji.silverTicket : emoji.goldenTicket}.`);
     }
   } catch (error) {
-    console.log(error);    
+    console.log(error, '[progressGiftPurchase]');    
   }
 }
 
@@ -908,7 +1377,7 @@ const progressRolePurchase = async (interaction, user, shopReply, type, shopChos
       await logChannel.send(`[Purchase] ${user.username} đã mua role ${shopChosen.roleInfo.roleId} bằng ${total}${type === 'buyRoleSilver' ? emoji.silverTicket : emoji.goldenTicket}.`);
     }
   } catch (error) {
-    console.log(error);    
+    console.log(error, '[progressRolePurchase]');    
   }
 }
 
@@ -995,7 +1464,7 @@ const progressQuestItemPurchase = async (interaction, user, shopReply, type, sho
       await logChannel.send(`[Purchase] ${user.username} đã mua ${shopChosen.questItem.emoji}${shopChosen.questItem.name} bằng ${total}${type === 'buyQuestItemSilver' ? emoji.silverTicket : emoji.goldenTicket}.`);
     }
   } catch (error) {
-    console.log(error);
+    console.log(error, '[progressQuestItemPurchase]');
   }
 }
 
@@ -1026,16 +1495,24 @@ const reply = async (interaction) => {
           .setLabel('Cửa hàng role')
           .setDescription('Bán các loại role')
           .setValue('rolesShop')
-      ).addOptions(
+      )
+      .addOptions(
         new StringSelectMenuOptionBuilder()
           .setLabel('Cửa hàng nhiệm vụ')
           .setDescription('Bán các vật phẩm làm nhiệm vụ và vé làm mới nhiệm vụ')
           .setValue('questShop')
-      ).addOptions(
+      )
+      .addOptions(
         new StringSelectMenuOptionBuilder()
           .setLabel('Cửa hàng điểm thân mật')
           .setDescription('Bán các loại role, rương bằng điểm thân mật')
           .setValue('intimacyPointsShop')
+      )
+      .addOptions(
+        new StringSelectMenuOptionBuilder()
+          .setLabel('Cửa hàng nông trại')
+          .setDescription('Bán các loại hạt giống, vật nuôi...')
+          .setValue('farmShop')
       );
   
     const rowSelect = new ActionRowBuilder()
@@ -1068,11 +1545,15 @@ const reply = async (interaction) => {
           chooseFriend(interaction, shopReply, intimacyItem, select, user);
           return;
         }
+        if (value === 'farmShop') {
+          farmShop(shopReply);
+          return;
+        }
   
-        questShop(interaction, shopReply, questItem, select, user)
+        questShop(interaction, shopReply, questItem, select, user);
         
       } catch (error) {
-        console.log(error);
+        console.log(error, '[choose type shop]');
       }
     });
   
@@ -1105,11 +1586,17 @@ const reply = async (interaction) => {
         }
         progressRolePurchase(interaction, user, shopReply, quantity, shopChosen);
       } catch (error) {
-        console.log(error);      
+        console.log(error, '[buy quest shop]');      
       }
     })
+
+    actionChooseFarmShop(shopReply, interaction, userId);
+    actionPagination(shopReply, interaction, userId);
+    actionFarmDetail(shopReply, interaction, userId);
+    actionItemFarmChoose(shopReply, interaction, userId);
+
   } catch (error) {
-    console.log(error);
+    console.log(error, '[reply choose type shop]');
   }
 }
 
@@ -1354,7 +1841,7 @@ const removeGiftItem = async (interaction, reply, gifts, beforeSelect) => {
       components: [row, rowBefore]
     })
   } catch (error) {
-    console.log(error);
+    console.log(error, '[removeGiftItem]');
   }
 }
 
@@ -1381,7 +1868,7 @@ const removeRoleItem = async (interaction, reply, roles, beforeSelect) => {
       components: [row, rowBefore]
     })
   } catch (error) {
-    console.log(error);
+    console.log(error, '[removeRoleItem]');
   }
 }
 
@@ -1409,7 +1896,7 @@ const removeQuestItem = async (interaction, reply, quests, beforeSelect) => {
       components: [row, rowBefore]
     })
   } catch (error) {
-    console.log(error);
+    console.log(error, '[removeQuestItem]');
   }
 }
 
@@ -1479,7 +1966,7 @@ const removeItemShop = {
             const quests = await ShopService.getQuestShop();
             removeQuestItem(interaction, reply, quests, select);
           } catch (error) {
-            
+            console.log(error, '[removeItemShop choose shop]');
           }
         })
         
@@ -1508,7 +1995,7 @@ const removeItemShop = {
               components: [row]
             })
           } catch (error) {
-            console.log(error);
+            console.log(error, '[removeItemShop gift]');
           }
         });
 
@@ -1537,7 +2024,7 @@ const removeItemShop = {
               components: [row]
             })
           } catch (error) {
-            console.log(error);
+            console.log(error, '[removeItemShop role]');
           }
         });
 
@@ -1566,11 +2053,11 @@ const removeItemShop = {
               components: [row]
             })
           } catch (error) {
-            console.log(error);
+            console.log(error, '[removeItemShop quest]');
           }
         });
     } catch (error) {
-      console.log(error);
+      console.log(error, '[removeItemShop]');
     }
   }
 }

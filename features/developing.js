@@ -11,7 +11,7 @@ const maintenance = {
         embeds: [createNormalMessage(`Bot đang trong thời gian bảo trì ${emoji.fix}`)]
       })
     } catch (error) {
-      console.log(error);      
+      console.log(error, '[maintenance]');      
     }
   }
 }
@@ -25,7 +25,7 @@ const developing = {
         embeds: [createNormalMessage(`Chức năng đang phát triển hoặc bot không hỗ trợ chức năng này`)]
       })
     } catch (error) {
-      console.log(error);      
+      console.log(error, '[developing]');      
     }
   }
 }

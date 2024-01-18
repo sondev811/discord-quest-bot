@@ -94,35 +94,58 @@ const confirmRegister = {
         });
         return;
       }
+      for(let i = 0; i < 6; i++) {
+        await FarmService.createFarm({
+          info: {
+            type: seedType.plant,
+            description: 'Đất trống có thể trồng cây',
+            name: 'Đất trống',
+            babyEmoji: emoji.landEmpty
+          },
+          type: farmType.plant,
+          plantingTime: null,
+          userId: user.discordUserId,
+          isEmpty: true
+        });
+      }
+
+      for(let i = 0; i < 2; i++) {
+        await FarmService.createFarm({
+          info: {
+            type: seedType.livestock,
+            description: 'Chỗ trống có thể thả vật nuôi',
+            name: 'Chỗ trống',
+            babyEmoji: emoji.cage
+          },
+          type: farmType.cage,
+          plantingTime: null,
+          userId: user.discordUserId,
+          isEmpty: true
+        });
+      }
+
+      for(let i = 0; i < 2; i++) {
+        await FarmService.createFarm({
+          info: {
+            type: seedType.fish,
+            description: 'Chỗ trống có thể thả vật cá',
+            name: 'Chỗ trống',
+            babyEmoji: emoji.aquarium
+          },
+          type: farmType.aquarium,
+          plantingTime: null,
+          userId: user.discordUserId,
+          isEmpty: true
+        });
+      }
+      
       await message.edit({ 
         embeds: [createNormalMessage(messages.registerSuccess)],
         components: [],
         allowedMentions: { repliedUser: false }
       });
     } catch (error) {
-      console.log(error, '[register]');
-      const message = await interaction.channel?.messages.fetch(interaction.message.id);
-      if (error?.message === errors.GET_USER_ERROR) {
-        await message.edit({ 
-          embeds: [createNormalMessage(messages.getUserInfoError)],
-          components: [],
-          allowedMentions: { repliedUser: false }
-        });
-        return;
-      }
-      if (error?.message === errors.CREATE_USER_ERROR) {
-        await message.edit({ 
-          embeds: [createNormalMessage(messages.createUserError)],
-          components: [],
-          allowedMentions: { repliedUser: false }
-        });
-        return;
-      }
-      await message.edit({ 
-        embeds: [createNormalMessage(messages.error)],
-        components: [],
-        allowedMentions: { repliedUser: false }
-      });
+      console.log(error, '[confirmRegister]');
     }
   }
 }

@@ -10,7 +10,7 @@ class UserService {
       const userUpdated = await userModel.findOneAndUpdate(query, body, { new: true });
       return userUpdated;
     } catch (error) {
-      console.log(error.message);
+      console.log(error, '[updateUser]');
       return null;
     }
   }
@@ -21,8 +21,7 @@ class UserService {
       const user = await userModel.findOne(query).maxTimeMS(customTimeout);
       return user;
     } catch (error) {
-      console.log(error.message, 'getUserById');
-      throw new Error(errors.GET_USER_ERROR);
+      console.log(error, '[getUserById]');
     }
   }
 
@@ -32,8 +31,7 @@ class UserService {
       const newUser = await newUserModel.save();
       return newUser;
     } catch (error) {
-      console.log(error.message, 'error createUser');
-      throw new Error(errors.CREATE_USER_ERROR);
+      console.log(error, '[createUser]');
     }
   }
 
@@ -61,10 +59,8 @@ class UserService {
 
       // Lưu lại người dùng
       await updatedUser.save();
-
-      console.log(updatedUser.quests.dailyQuestsReceived.quests);
     } catch (error) {
-      console.error(error);
+      console.log(error, '[updateDailyQuest]');
     }
   };
 
@@ -76,7 +72,8 @@ class UserService {
         { new: true }
       );
     } catch (error) {
-      console.error(error);
+      console.log(error, '[updateProgressWeekQuest]');
+
     }
   };
 
@@ -100,7 +97,7 @@ class UserService {
   
       await user.save();
     } catch (error) {
-      console.error(error);
+      console.log(error, '[updateWeekQuest]');
     }
   };
 
@@ -109,7 +106,7 @@ class UserService {
       const users = await userModel.find({});
       return users;
     } catch (error) {
-        console.log(error.message);
+      console.log(error, '[getAllUser]');
     }
   }
 }

@@ -1,3 +1,4 @@
+const { farmShopModel } = require("../models/farmShop.model");
 const { giftShopModel } = require("../models/giftShop.model");
 const { intimacyShopModel } = require("../models/intimacyShop");
 const { questShopModel } = require("../models/questShop.model");
@@ -10,7 +11,7 @@ class ShopService {
       const shopItems = await giftShopModel.find({});
       return shopItems;
     } catch (error) {
-        console.log(error.message);
+        console.log(error, '[getGiftShop]');
     }
   }
 
@@ -19,7 +20,7 @@ class ShopService {
       const shopItems = await roleShopModel.find({});
       return shopItems;
     } catch (error) {
-        console.log(error.message);
+        console.log(error, '[getRoleShop]');
     }
   }
 
@@ -28,7 +29,7 @@ class ShopService {
       const shopItems = await questShopModel.find({});
       return shopItems;
     } catch (error) {
-        console.log(error.message);
+        console.log(error, '[getQuestShop]');
     }
   }
 
@@ -37,7 +38,16 @@ class ShopService {
       const shopItems = await intimacyShopModel.find({});
       return shopItems;
     } catch (error) {
-        console.log(error.message);
+        console.log(error, '[getIntimacyShop]');
+    }
+  }
+
+  static async getFarmShop() {
+    try {
+      const shopItems = await farmShopModel.find();
+      return shopItems;
+    } catch (error) {
+        console.log(error, '[getFarmShop]');
     }
   }
 
@@ -49,7 +59,7 @@ class ShopService {
       const newItem = await newItemModel.save();
       return newItem;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[addRoleToShop]');
       return null;
     }
   }
@@ -62,7 +72,7 @@ class ShopService {
       const newItem = await newItemModel.save();
       return newItem;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[addGiftToShop]');
       return null;
     }
   }
@@ -75,7 +85,7 @@ class ShopService {
       const newItem = await newItemModel.save();
       return newItem;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[addItemToQuestShop]');
       return null;
     }
   }
@@ -88,7 +98,7 @@ class ShopService {
       const newItem = await newItemModel.save();
       return newItem;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[addIntimacyShop]');
       return null;
     }
   }
@@ -99,7 +109,7 @@ class ShopService {
       const removed = await giftShopModel.deleteMany(conditions);
       return removed;
     } catch (error) {
-      console.log(error);      
+      console.log(error, '[removeGiftShopItem]');      
     }
   }
 
@@ -109,7 +119,7 @@ class ShopService {
       const removed = await roleShopModel.deleteMany(conditions);
       return removed;
     } catch (error) {
-      console.log(error);      
+      console.log(error, '[removeRoleShopItem]');      
     }
   }
 
@@ -119,7 +129,7 @@ class ShopService {
       const removed = await questShopModel.deleteMany(conditions);
       return removed;
     } catch (error) {
-      console.log(error);      
+      console.log(error, '[removeQuestShopItem]');      
     }
   }
 }

@@ -10,7 +10,7 @@ class RoleService {
       const newItem = await newItemModel.save();
       return newItem;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[addRole]');
       return null;
     }
   }
@@ -21,7 +21,7 @@ class RoleService {
       const removed = await roleModel.deleteMany(conditions);
       return removed;
     } catch (error) {
-      console.log(error);      
+      console.log(error, '[removeRole]');      
     }
   }
 
@@ -30,7 +30,7 @@ class RoleService {
       const roles = await roleModel.find({});
       return roles;
     } catch (error) {
-        console.log(error.message);
+        console.log(error, '[getAllRole]');
     }
   }
 }

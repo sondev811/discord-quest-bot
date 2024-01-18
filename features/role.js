@@ -114,7 +114,7 @@ const removeRole = {
           })
           
         } catch (error) {
-          
+          console.log(error, '[remove role]');
         }
       })
 

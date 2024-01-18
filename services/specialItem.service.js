@@ -10,7 +10,7 @@ class SpecialItemService {
       const newItem = await newItemModel.save();
       return newItem;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[addItem]');
       return null;
     }
   }
@@ -21,7 +21,7 @@ class SpecialItemService {
       const removed = await specialItemModel.deleteMany(conditions);
       return removed;
     } catch (error) {
-      console.log(error);      
+      console.log(error, '[removeItem]');      
     }
   }
 
@@ -30,7 +30,7 @@ class SpecialItemService {
       const roles = await specialItemModel.find({});
       return roles;
     } catch (error) {
-        console.log(error.message);
+        console.log(error, '[getAllItem]');
     }
   }
 }

@@ -10,7 +10,8 @@ const ActionEnum = {
   POST_BLOG: 'post_blog',
   REPLY_POST_BLOG: 'reply_blog',
   BOOST_SERVER: 'boost_server',
-  SUBMIT_ITEM: 'submit_items'
+  SUBMIT_ITEM: 'submit_items',
+  FARM: 'farm'
 };
 
 const TaskTypeEnum = {
@@ -22,7 +23,9 @@ const RewardEnum = {
   SILVER_TICKET : 'silver_ticket',
   GOLD_TICKET : 'gold_ticket',
   GIFT: 'gift',
-  QUEST_RESET: 'questReset'
+  QUEST_RESET: 'questReset',
+  SEED: 'seed',
+  FARM_ITEM: 'farmItem',
 }
 
 const questSchema = new mongoose.Schema({

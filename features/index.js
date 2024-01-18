@@ -2,7 +2,7 @@ const { InteractionType, Events } = require('discord.js');
 const { help } = require('./help');
 const { register, confirmRegister } = require('./register');
 const { developing, maintenance } = require('./developing');
-const { info, tickets, daily, giveTicket, bag, top } = require('./user');
+const { info, tickets, daily, giveTicket, bag, top, buffTicket, buffItem } = require('./user');
 const { quest, giftQuest } = require('./quest');
 const { addRoleShop, addGiftShop, shop, addQuestShop, removeItemShop, addRoleIntimacyShop } = require('./shop');
 const { addFriend, removeFriend, relationship, gift } = require('./friend');
@@ -100,14 +100,19 @@ const run = async (client) => {
           case maintenance.name:
             maintenance.execute(interaction);
             break;
+          case buffTicket.name:
+            buffTicket.execute(interaction);
+            break;
+          case buffItem.name:
+            buffItem.execute(interaction);
+            break;
           default:
             developing.execute(interaction);
             break;
         }
       }
     } catch (error) {
-      console.error('An error occurred during command handling:', error);
-      interaction.followUp('Có lỗi xảy ra trong quá trình xử lý.');
+      console.error(error, '[error handle]');
     }
   });
 
@@ -129,7 +134,7 @@ const run = async (client) => {
         }
       }
     } catch (error) {
-      console.error('An error occurred during button handling:', error);
+      console.error(error, '[error event button]');
     }
   });
   

@@ -10,7 +10,7 @@ class GiftService {
       const newItem = await newItemModel.save();
       return newItem;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[addGift]');
       return null;
     }
   }
@@ -21,16 +21,16 @@ class GiftService {
       const removed = await giftModel.deleteMany(conditions);
       return removed;
     } catch (error) {
-      console.log(error);      
+      console.log(error, '[removeGift]');      
     }
   }
 
   static async getAllGift() {
     try {
-      const roles = await giftModel.find({});
-      return roles;
+      const gifts = await giftModel.find({});
+      return gifts;
     } catch (error) {
-        console.log(error.message);
+        console.log(error, '[getAllGift]');
     }
   }
 
@@ -40,7 +40,7 @@ class GiftService {
       const item = await giftModel.updateMany(conditions, { $set: { dropRate } });
       return item;
     } catch (error) {
-      console.log(error);
+      console.log(error, '[editDropRateGift]');
     }
   }
 }

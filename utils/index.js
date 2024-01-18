@@ -192,17 +192,17 @@ const getRandomGift = (gifts) => {
 
 const combineReward = (gifts) => {
   const hashMap = {}
-  const newGift = []
-  gifts.forEach((item) => {
+  const newGift = [];
+  for(const item of gifts) {
     if (hashMap[item._id] === undefined) {
-        hashMap[item._id] = 1;
-        newGift.push(item);
-    } else {
-        hashMap[item._id] += 1;
-        const findIndex = newGift.findIndex(data => data._id.equals(item._id));
-        newGift[findIndex].quantity += 1; 
-    }
-  })
+      hashMap[item._id] = 1;
+      newGift.push(item);
+      continue;
+    } 
+    hashMap[item._id] += 1;
+    const findIndex = newGift.findIndex(data => data._id.equals(item._id));
+    newGift[findIndex].quantity += 1; 
+  }
   return newGift;
 }
 
@@ -223,6 +223,39 @@ const randomGiftReward = (gifts, quantity) => {
   return combineReward(list);
 }
 
+const randomSeedReward = (seeds, quantity) => {
+  const list = [];
+  for (let i = 0; i < quantity; i++) {
+    const randomSeed = seeds[Math.floor(Math.random() * seeds.length)];
+    list.push({
+      _id: randomSeed._id,
+      name: randomSeed.name,
+      description: randomSeed.description,
+      rewardType: RewardEnum.SEED,
+      quantity: 1,
+      seedInfo: randomSeed
+    })
+  }
+  return combineReward(list);
+}
+
+const randomFarmItemReward = (farmItems, quantity) => {
+  const list = [];
+  for (let i = 0; i < quantity; i++) {
+    const farmItem = farmItems[Math.floor(Math.random() * farmItems.length)];
+    list.push({
+      _id: farmItem._id,
+      rewardType: RewardEnum.FARM_ITEM,
+      name: farmItem.name,
+      description: farmItem.description,
+      quantity: 1,
+      farmItemInfo: farmItem
+    })
+  }
+  return combineReward(list);
+}
+
+
 module.exports = { 
   convertTimestamp, 
   checkingLastAttended, 
@@ -238,5 +271,7 @@ module.exports = {
   randomBetweenTwoNumber,
   mergeImages,
   convertDateTime,
-  randomGiftReward
+  randomGiftReward,
+  randomSeedReward,
+  randomFarmItemReward
 };

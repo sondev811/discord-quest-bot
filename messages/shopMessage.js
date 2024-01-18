@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require("@discordjs/builders");
 const { shopActionType, emoji, imageCommand } = require("../constants/general");
 const { intimacyShopType } = require("../models/intimacyShop");
+const { farmShopType } = require("../models/farmShop.model");
 
 const renderGift = (gifts) => {
   let data = '';
@@ -44,6 +45,15 @@ const renderGiftReward = (gifts) => {
   return data;
 }
 
+const renderFarmItem = (data) => {
+  let render = '';
+  data.forEach(item => {
+    render += ` ${emoji.shopItem} ${item.type === farmShopType.seed ? item.seedInfo.seedEmoji : item.farmItemInfo.emoji}` + 
+    '``'+ (item.type === farmShopType.seed ? item.seedInfo.name : item.farmItemInfo.name) +'``' + ` » ${item.priceSilver} ${emoji.silverTicket} \n ${emoji.redDot} ${item.type === farmShopType.seed ? item.seedInfo.description : item.farmItemInfo.description}\n\n`
+  })
+  return render; 
+}
+
 const createShopMessage = (type, body = {}) => {
   let embed = null;
   switch (type) {
@@ -53,7 +63,7 @@ const createShopMessage = (type, body = {}) => {
         name: `Cửa hàng Làng`,
         iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
       })
-      .setDescription(`${emoji.giftShop} Cửa hàng quà tặng:\n${emoji.blank}${emoji.redDot} Bán các món quà sử dụng để tặng bạn bè\n\n${emoji.roleShop} Cửa hàng role:\n${emoji.blank}${emoji.redDot} Bán các loại role trong server\n\n ${emoji.questShop} Cửa hàng vật phẩm nhiệm vụ:\n${emoji.blank}${emoji.redDot} Bán các loại vật phẩm làm nhiệm vụ và vé làm mới nhiệm vụ\n\n ${emoji.pointShop} Cửa hàng điểm thân thiết:\n${emoji.blank}${emoji.redDot} Bán role, rương vật phẩm đặc biệt bằng điểm thân thiết\n\n─────────────────────────\nSố vé bạn đang có: \n${emoji.redDot} Vé xanh: ${body.silver} ${emoji.silverTicket}\n${emoji.redDot} Vé vàng: ${body.gold} ${emoji.goldenTicket}`)
+      .setDescription(`${emoji.giftShop} Cửa hàng quà tặng:\n${emoji.blank}${emoji.redDot} Bán các món quà sử dụng để tặng bạn bè\n\n${emoji.roleShop} Cửa hàng role:\n${emoji.blank}${emoji.redDot} Bán các loại role trong server\n\n ${emoji.questShop} Cửa hàng vật phẩm nhiệm vụ:\n${emoji.blank}${emoji.redDot} Bán các loại vật phẩm làm nhiệm vụ và vé làm mới nhiệm vụ\n\n ${emoji.pointShop} Cửa hàng điểm thân thiết:\n${emoji.blank}${emoji.redDot} Bán role, rương vật phẩm đặc biệt bằng điểm thân thiết\n\n ${emoji.farmShop} Cửa hàng nông trại:\n${emoji.blank}${emoji.redDot} Bán các loại hạt giống, vật nuôi...\n\n─────────────────────────\nSố vé bạn đang có: \n${emoji.redDot} Vé xanh: ${body.silver} ${emoji.silverTicket}\n${emoji.redDot} Vé vàng: ${body.gold} ${emoji.goldenTicket}`)
       .setColor(0xe59b9b)
       .setFooter({ 
         text: `Bot Làng • discord.gg/langleuleuliuliu`
@@ -231,6 +241,76 @@ const createShopMessage = (type, body = {}) => {
       })
       .setDescription(`${emoji.redDot}<@${body.username}> nhận được ${body.silver > 0 ? `${body.silver}${emoji.silverTicket}, ` : ''} ${body.gold > 0 ? `${body.gold}${emoji.goldenTicket},` : ''} ${renderGiftReward(body.gifts)}${body.userSpecialItem ? ', ``x1``' + `${body?.userSpecialItem?.emoji}${body?.userSpecialItem?.name}` : ''}${body.roleData ? `, Role ${body.roleData}` : ''}\n\n${emoji.redDot}<@${body.friendUserName}> nhận được ${body.silver > 0 ? `${body.silver}${emoji.silverTicket}, ` : ''} ${body.gold > 0 ? `${body.gold}${emoji.goldenTicket},` : ''} ${renderGiftReward(body.gifts)}${body.friendSpecialItem ? ', ``x1``' + `${body?.friendSpecialItem?.emoji}${body?.friendSpecialItem?.name}` : ''}${body.roleData ? `, Role ${body.roleData}` : ''}. \n\n ${emoji.redDot} Hai bạn còn ${body.point}${emoji.imPoint}`)
       .setColor(0xe59b9b)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`
+      })
+      .setTimestamp();
+      break;
+    case shopActionType.getFarmShop:
+      embed = new EmbedBuilder()
+      .setAuthor({
+        name: `Cửa hàng nông trại`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setDescription(`<:pumkin_tree:1184558806332624926> Cửa hàng cây trồng\n\n<:asheep:1180496405832405033> Cửa hàng vật nuôi\n\n<:foods:1180588094605500428> Cửa hàng vật phẩm\n`)
+      .setColor(0xe59b9b)
+      .setThumbnail(imageCommand.farmShop)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`
+      })
+      .setTimestamp();
+      break;
+    case shopActionType.getLiveStockSeed:
+      embed = new EmbedBuilder()
+      .setAuthor({
+        name: `Cửa hàng cây trồng`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setDescription(`<:sheep_baby:1180516310946427032> Chăn nuôi:\n` + renderFarmItem(body.liveStockSeeds) + `<:tutle_seed:1184570714968313856> Hồ cá:\n`+ renderFarmItem(body.fishSeeds) +`\n─────────────────────────\nSố vé bạn đang có:\n${emoji.redDot} Vé xanh: ${body.silver} ${emoji.silverTicket}\n${emoji.redDot} Vé vàng: ${body.gold} ${emoji.goldenTicket}`)
+      .setColor(0xe59b9b)
+      .setThumbnail(imageCommand.farmShop)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`
+      })
+      .setTimestamp();
+      break;
+    case shopActionType.getFarmItem:
+        embed = new EmbedBuilder()
+        .setAuthor({
+          name: `Cửa hàng cây trồng`,
+          iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+        })
+        .setDescription(renderFarmItem(body.data) + `─────────────────────────\nSố vé bạn đang có:\n${emoji.redDot} Vé xanh: ${body.silver} ${emoji.silverTicket}\n${emoji.redDot} Vé vàng: ${body.gold} ${emoji.goldenTicket}`)
+        .setColor(0xe59b9b)
+        .setThumbnail(imageCommand.farmShop)
+        .setFooter({ 
+          text: `Bot Làng • discord.gg/langleuleuliuliu`
+        })
+        .setTimestamp();
+        break;
+    case shopActionType.getFarmItemDetail:
+      embed = new EmbedBuilder()
+      .setAuthor({
+        name: `Cửa hàng cây trồng`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setDescription(`${body.data.type === farmShopType.seed ? body.data.seedInfo.seedEmoji : body.data.farmItemInfo.emoji } ${body.data.type === farmShopType.seed ? body.data.seedInfo.name : body.data.farmItemInfo.name } » ${body.data.priceSilver} ${emoji.silverTicket}\n\n » ${body.data.type === farmShopType.seed ? body.data.seedInfo.description : body.data.farmItemInfo.description}\n` + `─────────────────────────\nSố vé bạn đang có:\n${emoji.redDot} Vé xanh: ${body.silver} ${emoji.silverTicket}\n${emoji.redDot} Vé vàng: ${body.gold} ${emoji.goldenTicket}`)
+      .setColor(0xe59b9b)
+      .setThumbnail(imageCommand.farmShop)
+      .setFooter({ 
+        text: `Bot Làng • discord.gg/langleuleuliuliu`
+      })
+      .setTimestamp();
+      break;
+    case shopActionType.purchasedFarmItem:
+      embed = new EmbedBuilder()
+      .setAuthor({
+        name: `Mua vật phẩm thành công`,
+        iconURL: `https://cdn.discordapp.com/avatars/1168802361481904188/3526d4d2d2283aec1df941b1b5aef6ee.png`
+      })
+      .setDescription(`${emoji.redDot} Tên vật phẩm: ${body.data.type === farmShopType.seed ? body.data.seedInfo.seedEmoji : body.data.farmItemInfo.emoji} ${body.data.type === farmShopType.seed ? body.data.seedInfo.name : body.data.farmItemInfo.name }\n${emoji.redDot} Giá vật phẩm: ${body.data.priceSilver} ${emoji.silverTicket}\n${emoji.redDot} Số lượng: ${body.quantity}\n ${emoji.village} Làng đã thu bạn thêm 10%\n 💵 Tổng tiền: ${body.total}${emoji.silverTicket} \n─────────────────────────\nSố vé bạn còn sau khi mua vật phẩm:\n${emoji.redDot} Vé xanh: ${body.silver} ${emoji.silverTicket}\n${emoji.redDot} Vé vàng: ${body.gold} ${emoji.goldenTicket}`)
+      .setColor(0xe59b9b)
+      .setThumbnail(imageCommand.farmShop)
       .setFooter({ 
         text: `Bot Làng • discord.gg/langleuleuliuliu`
       })

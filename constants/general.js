@@ -27,6 +27,9 @@ const shopActionType = {
   getGiftShop: 'getGiftShop',
   getRoleShop: 'getRoleShop',
   getQuestShop: 'getQuestShop',
+  getFarmShop: 'getFarmShop',
+  getFarmItem: 'getFarmItem',
+  getFarmItemDetail: 'getFarmItemDetail',
   getImShop: 'getImShop',
   getDetailGift: 'getDetailGift',
   getDetailRole: 'getDetailRole',
@@ -36,7 +39,9 @@ const shopActionType = {
   removeRole: 'removeRole',
   removeQuest: 'removeQuest',
   guideIntimacyShop: 'guideIntimacyShop',
-  sendResultPurchaseIntimacyShop: 'sendResultPurchaseIntimacyShop'
+  sendResultPurchaseIntimacyShop: 'sendResultPurchaseIntimacyShop',
+  purchasedFarmItem: 'purchasedFarmItem',
+  getLiveStockSeed: 'getLiveStockSeed'
 }
 
 const friendActionType = {
@@ -77,6 +82,7 @@ const descriptionQuest = {
   reply_blog: (quantity, placeChannel) => `Trả lời ${quantity} bài tại kênh ${placeChannel ? `<#${placeChannel}>.` : 'bất kỳ.'}`,
   boost_server: (quantity, placeChannel) => `Boost server ${quantity} lần.`,
   submit_items: (quantity, placeChannel) => `Nộp x${quantity}${placeChannel}.`,
+  farm: (quantity, placeChannel) => `Trồng ${quantity} ${placeChannel}.`,
 };
 
 const purchaseQuantity = {
@@ -84,6 +90,14 @@ const purchaseQuantity = {
   buyFive: 5,
   buyTen: 10,
   buyFifty: 50
+}
+
+const purchaseFarmQuantity = {
+  buyOneFarm: 1,
+  buyFiveFarm: 5,
+  buyTenFarm: 10,
+  buyFiftyFarm: 50,
+  custom: (quantity) => Number(quantity)
 }
 
 const currency = {
@@ -106,6 +120,7 @@ const emoji = {
   roleShop: '<a:roles_shop:1175361769317863424>',
   questShop: '<a:quest_shop:1175361771180146710>',
   pointShop: '<a:point_shop:1175362917244358676>',
+  farmShop: '<:farm_shop:1181286185188999208>',
   fiveDot: '<a:dots:1175372021807468564>',
   yellowDot: '<a:yellowDot:1175372027377504327>',
   greenDot: '<a:greenDot:1175372023611019285>',
@@ -116,10 +131,15 @@ const emoji = {
   fiveDotX: '<a:fiveDotX:1175374510137028618>',
   fix: '<a:pepehacker:1175374728748347463>',
   certificate: '<:certificate:1175398855672598608>',
+  paper: '<:paper:1176434777868476447>',
+  prev: '<a:back_to_board:1174295696522874890>',
+  next: '<a:right:1176098056656142366>',
 // ----------------------------------
-  silverTicket: '<:leu_ticket:1168509616938815650>',
-  goldenTicket: '<:leu_ticket_vang:1169279388370604062>',
+  silverTicket: '<:silverticket:1178637939492794438>',
+  goldenTicket: '<:goldenticket:1178637655823626301>',
   shopItem: '<:leu_sieuthi:1171863524251795557>',
+  village: '<:village:1178638797123100775>'
+  
 }
 
 const friendshipData = {
@@ -151,7 +171,8 @@ const imageCommand = {
   help: 'https://cdn.discordapp.com/emojis/1171868775449120769.png',
   daily: 'https://cdn.discordapp.com/emojis/1171869050683531335.png',
   giftShop: 'https://cdn.discordapp.com/emojis/1171865808192946186.png',
-  roleShop: 'https://cdn.discordapp.com/emojis/1172069398098477087.png'
+  roleShop: 'https://cdn.discordapp.com/emojis/1172069398098477087.png',
+  farmShop: 'https://cdn.discordapp.com/emojis/1181286185188999208.png',
 }
 
 const rankingTrophy = {
@@ -178,5 +199,6 @@ module.exports = {
   imageCommand,
   rankingTrophy,
   friendshipData,
-  friendshipName
+  friendshipName,
+  purchaseFarmQuantity
 };
